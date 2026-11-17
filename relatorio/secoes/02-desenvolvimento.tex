@@ -3,15 +3,12 @@
 % =====================================================================
 \section{Desenvolvimento}\label{sec:desenvolvimento}
 
-As atividades práticas foram realizadas em um computador com Windows, utilizando o
-\textbf{Vagrant} para criar as máquinas virtuais e o \textbf{VMware Workstation} como
-\textit{provider} (software que efetivamente executa as VMs). Todas as máquinas usam a
-\textit{box} \texttt{generic/rocky9} (Rocky Linux 9) e foram ligadas em uma rede privada
-\texttt{192.168.1.0/24}, o que permite que se comuniquem pelo IP ou pelo nome. Seguindo a regra
-``um \texttt{Vagrantfile} por diretório'', cada servidor do laboratório tem a sua própria pasta, com
-o seu \texttt{Vagrantfile} e o seu script \texttt{provision.sh}. A Tabela~\ref{tab:maquinas} resume
-as máquinas criadas ao longo da disciplina e a Figura~\ref{fig:topologia} mostra a topologia do
-laboratório.
+As práticas foram feitas em um computador com Windows, usando o \textbf{Vagrant} para criar as
+máquinas virtuais e o \textbf{VMware Workstation} para executá-las. Todas as VMs usam o Rocky Linux 9
+(\textit{box} \texttt{generic/rocky9}) e estão ligadas na rede privada \texttt{192.168.1.0/24}. A
+Tabela~\ref{tab:maquinas} resume as máquinas criadas ao longo da disciplina. Os arquivos completos
+do laboratório estão versionados no repositório do trabalho, na pasta \texttt{relatorio/codigos}
+(\url{\repositorio}); senhas e chaves foram substituídas por marcadores.
 
 \begin{table}[H]
   \centering
@@ -35,42 +32,3 @@ laboratório.
   \end{tabularx}
   \fonte{Elaborado pelo autor (2026).}
 \end{table}
-
-\begin{figure}[H]
-  \centering
-  \caption{Topologia do laboratório de DevOps}\label{fig:topologia}
-  \begin{tikzpicture}
-    \foreach \nome/\ip/\papel [count=\i from 0] in {
-        control-node/192.168.1.2/{Ansible\\(\textit{Control Node})},
-        app01/192.168.1.3/{Easy Notes\\porta 8080},
-        db01/192.168.1.4/{MariaDB\\porta 3306},
-        docker-notes/192.168.1.5/{Docker\\porta 8080},
-        sonarqube/192.168.1.6/{SonarQube\\porta 9000},
-        jenkins/192.168.1.7/{Jenkins\\porta 8080}} {
-      \node[caixa, font=\scriptsize, text width=2.2cm, minimum height=1.6cm]
-          (vm\i) at (\i*2.62, 0) {\textbf{\nome}\\\texttt{\ip}\\[2pt]\papel};
-    }
-    \coordinate (barL) at ($(vm0.north west)+(0,0.75)$);
-    \coordinate (barR) at ($(vm5.north east)+(0,1.3)$);
-    \draw[draw=cordestaque, fill=cordestaque!10, rounded corners=2pt, line width=0.6pt]
-         (barL) rectangle (barR);
-    \node[font=\scriptsize\bfseries, text=cordestaque!80!black] at ($(barL)!0.5!(barR)$)
-         {Rede privada 192.168.1.0/24 (\texttt{private\_network} do Vagrant)};
-    \foreach \i in {0,...,5} {
-      \draw[line width=0.8pt, color=cordestaque] (vm\i.north) -- (vm\i.north |- barL);
-    }
-    \node[caixaescura, text width=9cm] (host) at ($(barL)!0.5!(barR)+(0,2.1)$)
-         {Computador físico (Windows)\\[2pt]
-          {\normalfont\scriptsize Vagrant: lê os \texttt{Vagrantfile} e cria as VMs\\
-           VMware Workstation: executa as VMs (\textit{provider})}};
-    \draw[seta] (host.south) -- node[rotulo, right=3pt, fill=none] {cria e executa as VMs
-         (\textit{box} \texttt{generic/rocky9})} (host.south |- barR);
-  \end{tikzpicture}
-  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
-\end{figure}
-
-Os códigos apresentados neste relatório (\texttt{Vagrantfile}, scripts de provisionamento,
-\textit{playbooks}, \texttt{Dockerfile} e \texttt{Jenkinsfile}) estão versionados no repositório
-GitHub do trabalho, na pasta \texttt{relatorio/codigos}: \url{\repositorio}. Senhas, chaves e
-\textit{tokens} foram substituídos por marcadores (por exemplo, \texttt{TROQUE\_SENHA\_APP}) para
-não expor informações sensíveis.

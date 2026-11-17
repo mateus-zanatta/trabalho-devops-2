@@ -3,27 +3,19 @@
 % =====================================================================
 \section{Introdução}
 
-Durante muito tempo, a entrega de software foi organizada em equipes separadas: os desenvolvedores
-escreviam o código e as equipes de operações (infraestrutura) eram responsáveis por instalá-lo e
-mantê-lo funcionando em servidores físicos, sujeitos a falhas. Com o modelo em cascata
-(\textit{waterfall}), as entregas eram lentas, cada \textit{deploy} se tornava um ``super evento''
-que envolvia vários times isolados em silos, e boa parte da configuração de servidores ainda era
-feita de forma manual \citep{muniz2026}. O resultado era pouca inovação, retrabalho e a famosa
-frase ``funciona na minha máquina''.
-
-O \textbf{DevOps} surgiu como resposta a esse cenário. Ele pode ser definido como um conjunto de
-práticas que combina o desenvolvimento de software (\textit{Dev}) e as operações de TI (\textit{Ops})
-com o objetivo de reduzir o ciclo de desenvolvimento, oferecendo entrega contínua de software de
-alta qualidade \citep{muniz2026,kim2018}. É importante destacar que DevOps não é uma ferramenta,
-e sim uma cultura e uma metodologia de trabalho: desenvolvedores e operações passam a trabalhar
-juntos durante todo o ciclo de vida do software, e o time de operações adota técnicas típicas do
-desenvolvimento, como versionamento, testes e automação. A Figura~\ref{fig:ciclo-devops} resume as
-etapas desse ciclo, que se repete continuamente.
+Durante muito tempo, desenvolvimento e operações trabalharam separados: os desenvolvedores
+escreviam o código e a equipe de infraestrutura era responsável por instalá-lo e mantê-lo em
+servidores, com processos manuais e \textit{deploys} que viravam ``super eventos'' envolvendo vários
+times isolados \citep{muniz2026}. O \textbf{DevOps} surgiu como resposta a esse cenário: é um
+conjunto de práticas que combina o desenvolvimento de software (\textit{Dev}) e as operações
+(\textit{Ops}) para reduzir o ciclo de desenvolvimento e entregar software de qualidade de forma
+contínua \citep{muniz2026,kim2018}. DevOps não é uma ferramenta, e sim uma cultura de trabalho em
+que as duas áreas atuam juntas em todo o ciclo de vida do software (Figura~\ref{fig:ciclo-devops}).
 
 \begin{figure}[H]
   \centering
   \caption{Etapas do ciclo DevOps}\label{fig:ciclo-devops}
-  \begin{tikzpicture}
+  \begin{tikzpicture}[scale=0.88, every node/.style={transform shape}]
     \foreach \nome/\cor [count=\i from 0] in {Definição/corprimaria, Planejar/corprimaria,
         Codificar/corprimaria, Build/corprimaria, Testar/corprimaria, Liberar/cordestaque,
         Deploy/cordestaque, Operar/cordestaque, Monitorar/cordestaque} {
@@ -44,47 +36,21 @@ etapas desse ciclo, que se repete continuamente.
   \fonte{Adaptado de Muniz (2026), Aula 1.}
 \end{figure}
 
-A integração entre desenvolvimento e operações é importante porque elimina a ``passagem de bastão''
-entre equipes. Quando as duas áreas compartilham responsabilidades, ferramentas e objetivos, os
-problemas são descobertos mais cedo, as entregas ficam menores e mais frequentes, e o
-\textit{feedback} sobre cada mudança chega rapidamente a quem a fez. Entre os benefícios
-apresentados na disciplina estão o aumento da velocidade de entrega, a criação de uma cultura de
-agilidade e automação, a aceleração dos \textit{releases}, o apoio à área de negócio
-(\textit{time to market}), o aumento da segurança e da estabilidade e uma colaboração muito maior
-entre as pessoas \citep{muniz2026}. Ainda assim, DevOps não é ``bala de prata'': ambientes pequenos,
-muito controlados ou com poucas mudanças podem funcionar bem com modelos mais tradicionais.
+Integrar desenvolvimento e operações é importante porque elimina a ``passagem de bastão'' entre
+equipes: com responsabilidades e ferramentas compartilhadas, os problemas aparecem mais cedo, as
+entregas ficam menores e mais frequentes e o \textit{feedback} chega rápido a quem fez a mudança.
+Para isso, algumas práticas são essenciais. A \textbf{automação} substitui tarefas manuais
+repetitivas e reduz o erro humano. O \textbf{versionamento} guarda o histórico de todo o projeto e
+permite voltar atrás. A \textbf{Infraestrutura como Código} descreve servidores em arquivos de texto
+que podem ser versionados e executados sempre com o mesmo resultado. Os \textbf{containers}
+empacotam a aplicação com suas dependências, tornando-a portátil. A \textbf{análise de código}
+encontra \textit{bugs} e vulnerabilidades antes da produção. E os \textbf{pipelines} encadeiam
+automaticamente \textit{build}, testes, análise e \textit{deploy} a cada alteração (CI/CD).
 
-Para que essa cultura funcione na prática, algumas práticas técnicas são fundamentais:
-
-\begin{itemize}
-  \item \textbf{Automação}: tarefas repetitivas (instalar pacotes, configurar serviços, compilar,
-        testar, publicar) passam a ser executadas por scripts e ferramentas, o que reduz o erro
-        humano e garante que o processo seja sempre igual.
-  \item \textbf{Versionamento}: todo artefato do projeto -- código, scripts e configurações -- fica
-        em um sistema de controle de versão como o Git, com histórico, rastreabilidade e a
-        possibilidade de voltar a uma versão anterior.
-  \item \textbf{Infraestrutura como Código (IaC)}: servidores e ambientes são descritos em arquivos
-        de texto (como \texttt{Vagrantfile} e \textit{playbooks} do Ansible), que podem ser
-        versionados, revisados e executados quantas vezes for necessário, sempre gerando o mesmo
-        resultado.
-  \item \textbf{Containers}: a aplicação é empacotada junto com todas as suas dependências,
-        tornando-se portátil e isolada, o que elimina conflitos de versões entre ambientes.
-  \item \textbf{Análise de código}: ferramentas de análise estática, como o SonarQube, apontam
-        \textit{bugs}, vulnerabilidades e problemas de manutenção antes que o código chegue à produção.
-  \item \textbf{Pipelines}: ferramentas como o Jenkins encadeiam automaticamente as etapas de
-        \textit{build}, teste, análise e \textit{deploy} a cada alteração, implementando a
-        integração e a entrega contínuas (CI/CD).
-\end{itemize}
-
-O objetivo das práticas realizadas na disciplina foi construir, passo a passo, um laboratório que
-simula um ambiente corporativo real: máquinas virtuais criadas com o Vagrant, código e configurações
-versionados com Git e GitHub, servidores de aplicação e de banco de dados configurados pelo Ansible,
-a aplicação Java \textit{Easy Notes} empacotada em container com Docker, a qualidade do código
-verificada pelo SonarQube e todo o fluxo automatizado em um \textit{pipeline} no Jenkins. Mais do que
-aprender cada ferramenta isoladamente, a proposta foi entender como elas se conectam dentro do
-ciclo DevOps.
-
-Este relatório está organizado da seguinte forma: a Seção~\ref{sec:desenvolvimento} descreve o
-ambiente do laboratório e cada atividade prática (Vagrant, Git e GitHub, Ansible, Docker, SonarQube
-e Jenkins), além da integração entre as ferramentas; a Seção~\ref{sec:conclusao} apresenta a
-conclusão; e a Seção~\ref{sec:reflexao} traz a resposta à pergunta reflexiva final.
+O objetivo das práticas da disciplina foi construir, passo a passo, um laboratório que simula um
+ambiente corporativo: máquinas virtuais criadas com o Vagrant, código e configurações versionados
+com Git e GitHub, servidores de aplicação e de banco de dados configurados pelo Ansible, a aplicação
+Java \textit{Easy Notes} empacotada com Docker, a qualidade do código verificada pelo SonarQube e o
+fluxo automatizado em um \textit{pipeline} no Jenkins -- entendendo, sobretudo, como essas
+ferramentas se conectam. A Seção~\ref{sec:desenvolvimento} descreve as atividades, a
+Seção~\ref{sec:conclusao} traz a conclusão e a Seção~\ref{sec:reflexao}, a reflexão final.

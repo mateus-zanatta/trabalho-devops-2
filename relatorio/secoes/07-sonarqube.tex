@@ -3,165 +3,42 @@
 % =====================================================================
 \subsection{Atividade com SonarQube}\label{sec:sonarqube}
 
-\subsubsection{O que é o SonarQube}
+\subsubsection{O que é o SonarQube e para que serve a análise estática}
 
 O \textbf{SonarQube} é uma ferramenta de \textbf{análise estática de código}: ele examina o
-código-fonte \textbf{sem executar a aplicação} e aponta problemas de qualidade, segurança e
-manutenção, apresentando os resultados em \textit{dashboards} \citep{sonar2026}. No DevOps, ele
-normalmente aparece dentro do \textit{pipeline} de CI/CD como um ``portão de qualidade''
-automático (\textit{quality gate}): depois do \textit{build} e dos testes, o código é analisado e,
-se não atender aos critérios definidos, a entrega é bloqueada \citep{muniz2026}.
+código-fonte \textbf{sem executar a aplicação} e aponta problemas, exibindo os resultados em
+\textit{dashboards} \citep{sonar2026}. A análise estática serve para encontrar cedo -- quando a
+correção é mais barata -- \textbf{\textit{bugs}} (erros que causam comportamento incorreto),
+\textbf{vulnerabilidades} (falhas exploráveis por um atacante), \textbf{\textit{security hotspots}}
+(trechos sensíveis que precisam de revisão), \textbf{\textit{code smells}} (problemas de manutenção),
+além de duplicações e baixa cobertura de testes. Um exemplo clássico é uma senha escrita direto no
+código. No DevOps, o SonarQube entra no \textit{pipeline} como um ``portão de qualidade''
+(\textit{Quality Gate}): se o código não atende aos critérios, a entrega é bloqueada \citep{muniz2026}.
 
-\subsubsection{Para que serve a análise estática de código}
+\subsubsection{Criação do ambiente e acesso ao painel}
 
-A análise estática responde perguntas críticas antes de o software ser entregue: o código está
-seguro? Possui \textit{bugs}? Está fácil de manter? Tem trechos duplicados? A cobertura de testes é
-adequada? Pode ir para produção? Um projeto pode funcionar normalmente e ainda assim esconder
-problemas, como uma senha fixa no código (\cod|const senha = "123456";|), uma consulta SQL insegura
-ou vários \texttt{if} aninhados que elevam a complexidade e dificultam testes e manutenção. Ao
-encontrar esses problemas cedo, a correção fica mais barata -- é a ideia de \textit{shift left},
-trazer a qualidade e a segurança para o início do processo. A Tabela~\ref{tab:tipos-sonar} resume os
-tipos de problemas que o SonarQube identifica.
+O SonarQube foi instalado em uma VM própria (\texttt{sonarqube}, \texttt{192.168.1.6}, 4 GB de
+memória, porta 9000 redirecionada para o Windows). O script de provisionamento automatizou a
+instalação: Java 21, criação do usuário \texttt{sonar} (o Elasticsearch interno não roda como
+\texttt{root}), ajuste do \textit{kernel} exigido pelo Elasticsearch (\texttt{vm.max\_map\_count}),
+download do SonarQube para \texttt{/opt/sonarqube}, criação do serviço \texttt{sonar} no
+\texttt{systemd}, liberação da porta 9000 no \textit{firewall} e instalação do \textbf{SonarScanner
+CLI}. O painel foi acessado pelo navegador em \url{http://127.0.0.1:9000}, com o usuário
+\texttt{admin}/\texttt{admin}, cuja senha o SonarQube obriga a trocar no primeiro acesso.
 
-\begin{table}[H]
-  \centering
-  \caption{Tipos de problemas identificados pelo SonarQube}\label{tab:tipos-sonar}
-  \small
-  \renewcommand{\arraystretch}{1.2}
-  \begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X}
-    \toprule
-    \textbf{Tipo} & \textbf{Significado} \\
-    \midrule
-    \textit{Bug} & Erro de programação que pode causar comportamento incorreto (confiabilidade). \\
-    \textit{Vulnerability} & Falha que pode ser explorada por um atacante (segurança). \\
-    \textit{Security Hotspot} & Trecho sensível que precisa ser revisado por uma pessoa para decidir
-      se é ou não um risco. \\
-    \textit{Code Smell} & Problema que não quebra a aplicação, mas prejudica a legibilidade e a
-      manutenção (manutenibilidade). \\
-    Duplicação & Código repetido em vários pontos do projeto. \\
-    Cobertura & Percentual do código exercitado por testes automatizados. \\
-    \bottomrule
-  \end{tabularx}
-  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026) e SonarSource (2026).}
-\end{table}
+\subsubsection{Criação do projeto e execução do sonar-scanner}
 
-A arquitetura do SonarQube (Figura~\ref{fig:arquitetura-sonar}) separa quem analisa de quem
-processa e exibe os resultados: o \textbf{SonarScanner} roda junto ao código (na máquina do
-desenvolvedor ou no servidor de CI), executa os analisadores de cada linguagem e envia um relatório
-ao servidor; no servidor, o \textbf{Compute Engine} processa o relatório (calcula métricas, aplica as
-regras e o \textit{quality gate}), o \textbf{Search Server} (Elasticsearch) indexa os dados para
-consultas rápidas, o \textbf{Web Server} oferece a interface e a API, e o \textbf{banco de dados}
-armazena projetos, métricas, \textit{issues} e configurações.
+No painel, o projeto foi criado em \textit{Create Project} $\rightarrow$ \textit{Local project}, com
+o nome \textit{Easy Notes} e a chave \texttt{easy-notes}; como método de análise foi escolhido
+\textit{Locally}, e o SonarQube gerou um \textbf{\textit{token}} -- uma credencial que o
+\textit{scanner} usa para enviar os resultados. Para projetos Java, o \textit{scanner} precisa também
+das classes compiladas, por isso o projeto foi clonado e compilado com o Maven antes da análise
+(Código~\ref{cod:sonar-scanner}).
 
-\begin{figure}[H]
-  \centering
-  \caption{Arquitetura e fluxo de análise do SonarQube}\label{fig:arquitetura-sonar}
-  \begin{tikzpicture}
-    \node[caixacinza, text width=2.1cm, minimum height=1.2cm] (src) {\textbf{Código-fonte}\\{\scriptsize projeto Easy Notes}};
-    \node[caixa, text width=2.5cm, minimum height=1.2cm, right=0.8cm of src] (scan)
-         {\textbf{SonarScanner}\\{\scriptsize analisadores de linguagem}};
-    \node[caixa, text width=2.3cm, right=2.4cm of scan, yshift=0.95cm] (ce) {\textbf{Compute Engine}\\{\scriptsize métricas, regras, \textit{quality gate}}};
-    \node[caixa, text width=2.3cm, below=0.55cm of ce] (es) {\textbf{Search Server}\\{\scriptsize Elasticsearch}};
-    \node[caixa, text width=2.2cm, right=0.6cm of ce] (web) {\textbf{Web Server}\\{\scriptsize \textit{dashboards} e API}};
-    \node[caixalaranja, text width=2.2cm, below=0.55cm of web] (db) {\textbf{Banco de dados}\\{\scriptsize projetos, métricas, \textit{issues}}};
-    \begin{scope}[on background layer]
-      \node[draw=corprimaria!50, dashed, rounded corners=4pt, fit=(ce)(es)(web)(db), inner sep=7pt,
-            label={[font=\scriptsize\bfseries, text=corprimaria]above:Servidor SonarQube (VM sonarqube -- porta 9000)}] (srv) {};
-    \end{scope}
-    \draw[seta] (src) -- (scan);
-    \draw[seta] (scan.east) -- node[rotulo, above]{relatório} node[rotulo, below]{HTTP + \textit{token}} (scan.east -| srv.west);
-    \draw[setadupla] (ce) -- (web);
-    \draw[setadupla] (ce) -- (es);
-    \draw[setadupla] (web) -- (db);
-    \draw[setadupla] (ce.south east) -- (db.north west);
-  \end{tikzpicture}
-  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026) e SonarSource (2026).}
-\end{figure}
-
-\subsubsection{Como o ambiente foi criado}
-
-O SonarQube foi instalado em uma VM própria, criada pelo Vagrant (Código~\ref{cod:vagrantfile-sonar}).
-Ela recebeu 4 GB de memória, porque o SonarQube executa internamente um Elasticsearch, que consome
-bastante memória; a porta 9000 foi redirecionada para o Windows e a VM ganhou o IP privado
-\texttt{192.168.1.6}, para que o Jenkins pudesse acessá-la depois.
-
-\codigo{Ruby}{04-sonarqube/Vagrantfile}{Vagrantfile da VM do SonarQube}{vagrantfile-sonar}
-
-O script de provisionamento automatiza toda a instalação. Os trechos principais estão nos
-Códigos~\ref{cod:sonar-prov1} e~\ref{cod:sonar-prov2}; o arquivo completo está no repositório.
-
-\codigolongo[firstline=1,lastline=46,firstnumber=1]{bash}{04-sonarqube/provision.sh}{Provisionamento do SonarQube: variáveis, dependências e ajustes do sistema (trecho)}{sonar-prov1}
-
-\codigolongo[firstline=67,lastline=115,firstnumber=67]{bash}{04-sonarqube/provision.sh}{Provisionamento do SonarQube: configuração, serviço systemd e firewall (trecho)}{sonar-prov2}
-
-Em resumo, o script: (1) atualiza o sistema e instala o Java 21, exigido pelo SonarQube;
-(2) cria o usuário de sistema \texttt{sonar}, já que o Elasticsearch não pode ser executado como
-\texttt{root}; (3) ajusta parâmetros do \textit{kernel} exigidos pelo Elasticsearch
-(\texttt{vm.max\_map\_count=524288} e \texttt{fs.file-max}) e os limites de arquivos e processos do
-usuário \texttt{sonar}; (4) baixa e extrai o SonarQube em \texttt{/opt/sonarqube}; (5) configura o
-servidor para escutar em todas as interfaces na porta 9000 (\texttt{sonar.properties}); (6) cria o
-serviço \texttt{sonar.service} no \texttt{systemd}, para iniciar automaticamente no \textit{boot};
-(7) libera a porta 9000 no \texttt{firewalld}; e (8) instala o \textbf{SonarScanner CLI} em
-\texttt{/opt/sonar-scanner}, adicionando-o ao \texttt{PATH} e criando um link em
-\texttt{/usr/local/bin}. A primeira inicialização leva alguns minutos; o andamento pode ser
-acompanhado com \cod|systemctl status sonar| e com os logs em \path{/opt/sonarqube/logs/}
-(\texttt{sonar.log}, \texttt{web.log} e \texttt{es.log}).
-
-\subsubsection{Acesso ao painel web}
-
-Com o serviço no ar, o painel foi acessado pelo navegador do Windows em
-\url{http://127.0.0.1:9000} (graças ao redirecionamento de porta; pela rede privada, o endereço
-seria \url{http://192.168.1.6:9000}). O primeiro acesso usa o usuário e a senha padrão
-\texttt{admin}/\texttt{admin}, e o SonarQube obriga a troca da senha logo em seguida.
-
-\printtela{sonar-inicial}{Tela inicial do SonarQube}%
-  {Navegador em \texttt{http://127.0.0.1:9000} mostrando a tela inicial do SonarQube (lista de
-   projetos ou tela de \textit{login}). Não mostrar a senha.}
-
-\subsubsection{Como foi criado o projeto}
-
-O projeto foi criado manualmente no painel, seguindo o assistente do SonarQube:
-
-\begin{enumerate}
-  \item \textit{Create Project} $\rightarrow$ \textit{Local project};
-  \item nome de exibição \textit{Easy Notes}, chave do projeto (\textit{project key})
-        \texttt{easy-notes} e \textit{branch} principal \texttt{main};
-  \item definição de código novo (\textit{new code}): \textit{Use the global setting};
-  \item método de análise: \textit{Locally} (análise executada pelo SonarScanner na linha de comando);
-  \item geração de um \textit{token} de análise, com nome e prazo de expiração -- ele é exibido uma
-        única vez e funciona como uma senha para o \textit{scanner} enviar os resultados;
-  \item escolha da ferramenta de \textit{build} e do sistema operacional (Linux), após a qual o
-        SonarQube mostra o comando de análise a ser executado.
-\end{enumerate}
-
-\begin{atencao}[Token]
-  O \textit{token} dá acesso ao servidor e não deve aparecer no relatório, em prints ou em arquivos
-  versionados. Por isso ele foi guardado em uma variável de ambiente
-  (\cod|export SONAR_TOKEN=...|) e ocultado nos prints. Se for exposto, deve ser revogado em
-  \textit{My Account} $\rightarrow$ \textit{Security}.
-\end{atencao}
-
-\printtela{sonar-projeto}{Projeto Easy Notes criado no SonarQube}%
-  {Tela do SonarQube com o projeto \textit{Easy Notes} (\texttt{easy-notes}) criado, por exemplo a
-   etapa de escolha do método de análise ou a página do projeto ainda sem análise.}
-
-\printtela{sonar-token}{Geração do token de análise (com o valor ocultado)}%
-  {Tela de geração do \textit{token} com o valor do \textit{token} \textbf{borrado/tarjado}
-   antes de salvar o print.}
-
-\subsubsection{Execução do sonar-scanner}
-
-Para projetos Java, o SonarScanner precisa, além do código-fonte, das classes compiladas
-(\texttt{sonar.java.binaries}). Por isso, na VM \texttt{sonarqube} o projeto foi primeiro clonado e
-compilado com o Maven, e só então analisado (Código~\ref{cod:sonar-scanner}).
-
-\begin{terminal}[caption={Preparação do projeto e execução da análise com o sonar-scanner},label={cod:sonar-scanner}]
-sudo dnf install -y git maven                    # ferramentas para obter e compilar o projeto
+\begin{terminal}[caption={Compilação do projeto e execução do sonar-scanner},label={cod:sonar-scanner}]
 git clone https://github.com/callicoder/spring-boot-mysql-rest-api-tutorial.git easy-notes
-cd easy-notes
-mvn -B clean package -DskipTests                 # gera target/classes
-
-export SONAR_TOKEN=************                  # token gerado no painel (valor oculto)
+cd easy-notes && mvn -B clean package -DskipTests     # gera target/classes
+export SONAR_TOKEN=************                       # token gerado no painel (oculto)
 sonar-scanner \
   -Dsonar.projectKey=easy-notes \
   -Dsonar.sources=src/main/java \
@@ -170,119 +47,66 @@ sonar-scanner \
   -Dsonar.token=$SONAR_TOKEN
 \end{terminal}
 
-Cada parâmetro tem uma função: \texttt{sonar.projectKey} é o identificador único do projeto no
-SonarQube; \texttt{sonar.sources} indica onde está o código a ser analisado (\texttt{.} seria o
-diretório atual); \texttt{sonar.java.binaries} aponta as classes compiladas; \texttt{sonar.host.url}
-é o endereço do servidor; e \texttt{sonar.token} é a credencial de autenticação (em versões antigas,
-o parâmetro equivalente era \texttt{sonar.login}). Esses parâmetros também podem ficar em um arquivo
-\texttt{sonar-project.properties} na raiz do projeto (Código~\ref{cod:sonar-props}); nesse caso,
-basta executar \cod|sonar-scanner|, e o \textit{token} continua vindo da variável de ambiente.
-Ao final, o \textit{scanner} exibe \texttt{ANALYSIS SUCCESSFUL} com o link do \textit{dashboard}
-e \texttt{EXECUTION SUCCESS}.
+Os parâmetros indicam a chave do projeto (\texttt{projectKey}), onde está o código
+(\texttt{sources}), as classes compiladas (\texttt{java.binaries}), o endereço do servidor
+(\texttt{host.url}) e a credencial (\texttt{token}; em versões antigas, \texttt{sonar.login}). Ao
+final, o \textit{scanner} exibe \texttt{ANALYSIS SUCCESSFUL} e o resultado aparece no
+\textit{dashboard}.
 
-\codigo{ini}{04-sonarqube/sonar-project.properties}{Arquivo sonar-project.properties do projeto}{sonar-props}
-
-\printtela{sonar-scanner-exec}{Execução do sonar-scanner}%
-  {Terminal com o final da saída do \texttt{sonar-scanner} mostrando \texttt{ANALYSIS SUCCESSFUL}
-   e \texttt{EXECUTION SUCCESS}. Conferir se o \textit{token} não aparece no print.}
+\begin{atencao}[Token]
+  O \textit{token} funciona como uma senha: ele foi guardado em uma variável de ambiente, não aparece
+  em arquivos versionados e foi ocultado nos prints.
+\end{atencao}
 
 \subsubsection{Resultados da análise}
-
-O \textit{dashboard} do projeto (\textit{Overview}) mostra o resultado do \textbf{Quality Gate} e as
-métricas de confiabilidade, segurança, manutenibilidade, \textit{security hotspots}, cobertura e
-duplicação. Dependendo da versão e do modo configurado no servidor, os problemas aparecem
-classificados como \textit{Bugs}, \textit{Vulnerabilities} e \textit{Code Smells} ou pelas
-qualidades de software \textit{Reliability}, \textit{Security} e \textit{Maintainability}, com
-níveis de severidade. A Tabela~\ref{tab:resultado-sonar} registra os valores obtidos na análise.
 
 % CONFIRA: preencha a tabela com os números do SEU dashboard (os mesmos do print).
 \begin{table}[H]
   \centering
   \caption{Resultado da análise do projeto Easy Notes no SonarQube}\label{tab:resultado-sonar}
   \small
-  \renewcommand{\arraystretch}{1.25}
+  \renewcommand{\arraystretch}{1.2}
   \begin{tabular}{l c}
     \toprule
     \textbf{Métrica} & \textbf{Resultado} \\
     \midrule
     Quality Gate & \preencher{Passed / Failed} \\
-    \textit{Bugs} / Confiabilidade (\textit{Reliability}) & \preencher{qtd. e nota} \\
-    Vulnerabilidades / Segurança (\textit{Security}) & \preencher{qtd. e nota} \\
+    \textit{Bugs} / Confiabilidade & \preencher{qtd. e nota} \\
+    Vulnerabilidades / Segurança & \preencher{qtd. e nota} \\
     \textit{Security Hotspots} & \preencher{qtd.} \\
-    \textit{Code Smells} / Manutenibilidade (\textit{Maintainability}) & \preencher{qtd. e nota} \\
-    Cobertura de testes & \preencher{\%} \\
-    Duplicações & \preencher{\%} \\
-    Linhas de código & \preencher{qtd.} \\
+    \textit{Code Smells} / Manutenibilidade & \preencher{qtd. e nota} \\
+    Duplicações e cobertura & \preencher{\% e \%} \\
     \bottomrule
   \end{tabular}
   \fonte{Elaborado pelo autor (2026), a partir do \textit{dashboard} do SonarQube.}
 \end{table}
 
 % CONFIRA: ajuste a lista abaixo com os apontamentos que aparecerem na aba Issues do SEU projeto.
-Na aba \textit{Issues}, os apontamentos do projeto Easy Notes foram principalmente de manutenção e
-de segurança, como os seguintes:
+Na aba \textit{Issues}, os apontamentos foram principalmente de manutenção e segurança, como: a
+\textbf{injeção de dependência por campo} (\texttt{@Autowired} no atributo do
+\texttt{NoteController}, quando o recomendado é injetar pelo construtor); a \textbf{entidade JPA
+recebida diretamente na API} (\texttt{@RequestBody Note}), risco de \textit{mass assignment} que se
+resolve com um objeto de transferência (DTO); o retorno com tipo genérico curinga
+(\texttt{ResponseEntity<?>}); e atributos não \texttt{final} na classe de exceção.
 
-\begin{itemize}
-  \item \textbf{Injeção de dependência por campo}: o \texttt{NoteController} usa \texttt{@Autowired}
-        diretamente no atributo \texttt{noteRepository}; a recomendação é usar injeção pelo
-        construtor, que deixa a dependência explícita e facilita os testes
-        (Código~\ref{cod:correcao-injecao}).
-  \item \textbf{Entidade persistente recebida diretamente na API}: os métodos de criação e
-        atualização recebem a entidade JPA \texttt{Note} como \texttt{@RequestBody}. Isso é
-        apontado como risco de segurança (\textit{mass assignment}), pois o cliente pode enviar
-        campos que não deveria alterar; o ideal é usar um objeto de transferência (DTO).
-  \item \textbf{Tipo genérico curinga no retorno}: o método \texttt{deleteNote} retorna
-        \texttt{ResponseEntity<?>}; a regra recomenda declarar um tipo concreto.
-  \item \textbf{Variável temporária desnecessária}: em \texttt{updateNote}, o resultado de
-        \texttt{save()} é guardado em \texttt{updatedNote} só para ser retornado na linha seguinte.
-  \item \textbf{Classe de exceção mutável}: os atributos da \texttt{ResourceNotFoundException}
-        deveriam ser \texttt{final}, e o atributo do tipo \texttt{Object} não é serializável.
-  \item \textbf{Modificadores em testes JUnit 5}: a classe e o método de teste não precisam ser
-        \texttt{public}.
-\end{itemize}
+\printtela{sonar-token}{Geração do token de análise (valor ocultado)}%
+  {Tela de geração do \textit{token} com o valor \textbf{borrado/tarjado}.}
 
-\begin{listagem}[language=Java,caption={Exemplo de correção: de injeção por campo para injeção pelo construtor},label={cod:correcao-injecao}]
-// Antes: injeção por campo (apontada pelo SonarQube)
-@Autowired
-NoteRepository noteRepository;
+\printtela{sonar-scanner-exec}{Execução do sonar-scanner}%
+  {Final da saída do \texttt{sonar-scanner} com \texttt{ANALYSIS SUCCESSFUL} e
+   \texttt{EXECUTION SUCCESS} (sem o \textit{token} visível).}
 
-// Depois: injeção pelo construtor, com o campo privado e final
-private final NoteRepository noteRepository;
-
-public NoteController(NoteRepository noteRepository) {
-    this.noteRepository = noteRepository;
-}
-\end{listagem}
-
-Também chamou a atenção que o \texttt{application.properties} original do projeto traz a senha do
-banco em texto puro -- exatamente o tipo de credencial exposta que a análise de segurança procura e
-que, no laboratório, foi substituída por variáveis do Ansible.
-
-\printtela{sonar-dashboard}{Dashboard do projeto Easy Notes no SonarQube}%
-  {Tela \textit{Overview} do projeto mostrando o status do Quality Gate e as métricas
-   (confiabilidade, segurança, manutenibilidade, \textit{hotspots}, cobertura e duplicação).}
+\printtela{sonar-dashboard}{Dashboard do projeto no SonarQube}%
+  {Tela \textit{Overview} do projeto com o Quality Gate e as métricas.}
 
 \printtela{sonar-issues}{Problemas apontados na aba Issues}%
-  {Aba \textit{Issues} do projeto listando os apontamentos (de preferência abrindo um deles, como a
-   injeção por campo no \texttt{NoteController}, para mostrar a explicação da regra).}
-
-\subsubsection{Quality Gate, Quality Profile e código novo}
-
-O \textbf{Quality Profile} define \textbf{quais regras} são aplicadas na análise de cada linguagem
-(o padrão é o \textit{Sonar way}). O \textbf{Quality Gate} define \textbf{se o projeto passou ou
-falhou}, com base em condições como ausência de problemas graves, cobertura mínima de testes e
-duplicação máxima. Uma boa prática é aplicar essas condições ao \textbf{código novo}
-(\textit{New Code}), seguindo o ``princípio do escoteiro'': o sistema legado pode ter problemas, mas
-o código novo deve entrar com qualidade, de modo que o projeto melhore um pouco a cada alteração e a
-dívida técnica -- o custo futuro de decisões apressadas -- não aumente \citep{muniz2026}.
+  {Aba \textit{Issues} do projeto listando os apontamentos.}
 
 \subsubsection{Como o SonarQube melhora a qualidade e a segurança antes do deploy}
 
-O SonarQube funciona como um fiscal automatizado na esteira DevOps: cada versão do código é analisada
-de forma objetiva e padronizada, e os problemas aparecem logo depois do \textit{commit}, quando
-ainda são baratos de corrigir. Integrado ao \textit{pipeline}, o Quality Gate impede que código com
-\textit{bugs} graves, vulnerabilidades ou baixa qualidade avance para a geração da imagem e para o
-\textit{deploy}; o time corrige e envia um novo \textit{commit} para reanálise. Além disso, os
-\textit{dashboards} dão visibilidade da dívida técnica a todo o time. É importante lembrar, porém,
-que ele não substitui os testes automatizados nem a revisão humana: o SonarQube não entende a regra
-de negócio, ele complementa o processo de qualidade.
+O SonarQube funciona como um fiscal automático: cada versão do código é analisada de forma objetiva,
+e os problemas aparecem logo após o \textit{commit}, quando ainda são baratos de corrigir. As regras
+aplicadas a cada linguagem formam o \textbf{Quality Profile}, e as condições para aprovar o código
+(por exemplo, nenhum problema grave novo e duplicação baixa) formam o \textbf{Quality Gate}, que no
+\textit{pipeline} impede que código reprovado chegue ao \textit{deploy}. Ele não substitui testes nem
+revisão humana -- não entende a regra de negócio --, mas complementa o processo de qualidade.

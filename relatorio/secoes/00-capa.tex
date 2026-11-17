@@ -1,8 +1,7 @@
 % =====================================================================
-%  Capa, folha de rosto, sumário e listas
+%  Capa e sumário
 % =====================================================================
 
-% ---------- Capa ----------
 \begin{titlepage}
   \centering
   {\large\bfseries \MakeUppercase{\instituicao}\par}
@@ -10,11 +9,12 @@
   {\normalsize \MakeUppercase{\curso}\par}
   \vspace{0.25cm}
   {\normalsize Unidade Curricular: \disciplina\par}
+  {\normalsize Professor: \professor\par}
 
-  \vspace{3.2cm}
+  \vspace{3cm}
   {\large\bfseries \MakeUppercase{\autor}\par}
 
-  \vspace{4cm}
+  \vspace{3.5cm}
   {\color{corprimaria}\rule{0.6\linewidth}{0.8pt}\par}
   \vspace{0.5cm}
   {\LARGE\bfseries\color{corprimaria} \titulo\par}
@@ -28,46 +28,10 @@
   {\normalsize \ano\par}
 \end{titlepage}
 
-% ---------- Folha de rosto ----------
-\thispagestyle{empty}
-\begin{center}
-  {\large\bfseries \MakeUppercase{\autor}\par}
-
-  \vspace{5cm}
-  {\Large\bfseries \titulo\par}
-  \vspace{0.4cm}
-  {\large \subtitulo\par}
-\end{center}
-
-\vspace{2cm}
-\noindent\hfill
-\begin{minipage}{0.55\linewidth}
-  \small\setstretch{1.0}
-  Relatório técnico apresentado à Unidade Curricular de \disciplina{}, do \curso{} do
-  \instituicao{}, como requisito parcial de avaliação.
-
-  \vspace{0.6cm}
-  Professor: \professor{}.
-\end{minipage}
-
-\vfill
-\begin{center}
-  {\normalsize \local\par}
-  {\normalsize \ano\par}
-\end{center}
-\clearpage
-
-% ---------- Sumário e listas ----------
 \pagestyle{empty}
 {\hypersetup{linkcolor=black}
  \setstretch{1.15}
  \tableofcontents
- \thispagestyle{empty}
- \clearpage
- \listoffigures
- \thispagestyle{empty}
- \clearpage
- \lstlistoflistings
  \thispagestyle{empty}
  \clearpage
 }

@@ -3,248 +3,96 @@
 % =====================================================================
 \subsection{Atividade com Vagrant}\label{sec:vagrant}
 
-\subsubsection{O que é o Vagrant}
+\subsubsection{O que é o Vagrant e para que foi usado}
 
-O \textbf{Vagrant}, da HashiCorp, é uma ferramenta de linha de comando para criar e gerenciar
-máquinas virtuais a partir de um arquivo de configuração em texto, o \texttt{Vagrantfile}. Em vez
-de abrir o hipervisor, criar a VM manualmente, instalar o sistema operacional e configurar rede e
-pacotes ``na mão'', basta descrever a máquina nesse arquivo e executar \cod|vagrant up|: o Vagrant
-baixa a imagem base, cria a VM, configura a rede e executa os scripts de provisionamento
-\citep{hashicorp2026}. O problema que ele resolve é bem conhecido: sem padronização, cada
-desenvolvedor configura o ambiente de um jeito, as versões das dependências variam entre as
-máquinas e surge o ``funciona na minha máquina''. Com o Vagrant, o ambiente é definido por código e
-pode ser recriado de forma idêntica por qualquer pessoa. Os principais conceitos estão na
-Tabela~\ref{tab:conceitos-vagrant}.
+O \textbf{Vagrant}, da HashiCorp, é uma ferramenta de linha de comando que cria e gerencia máquinas
+virtuais a partir de um arquivo de texto, o \texttt{Vagrantfile}. Nele são definidos a
+\textbf{\textit{box}} (imagem base do sistema operacional), a rede, as portas, as pastas compartilhadas
+e os scripts de \textbf{provisionamento}, executados automaticamente na criação da VM; quem executa a
+máquina é o \textbf{\textit{provider}} (VirtualBox, VMware, Hyper-V\ldots) \citep{hashicorp2026}.
+Com isso, o ambiente deixa de ser montado ``na mão'' e passa a ser descrito por código, o que acaba
+com o problema do ``funciona na minha máquina''.
 
-\begin{table}[H]
-  \centering
-  \caption{Principais conceitos do Vagrant}\label{tab:conceitos-vagrant}
-  \small
-  \renewcommand{\arraystretch}{1.25}
-  \begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X}
-    \toprule
-    \textbf{Conceito} & \textbf{Descrição} \\
-    \midrule
-    \texttt{Vagrantfile} & Arquivo (em sintaxe Ruby) que descreve a VM: \textit{box}, rede, portas,
-      pastas compartilhadas, recursos de hardware e provisionamento. Por ser texto, é fácil de versionar. \\
-    \textit{Box} & Imagem base do sistema operacional (ex.: \texttt{generic/rocky9}). É baixada uma
-      única vez e clonada para cada nova VM. \\
-    \textit{Provider} & Software de virtualização que executa a VM (VirtualBox, VMware, Hyper-V, Docker). \\
-    \textit{Provisioner} & Mecanismo que configura a VM automaticamente após a criação (no laboratório,
-      scripts \textit{shell} \texttt{provision.sh}). \\
-    \textit{Synced folder} & Pasta compartilhada entre o computador físico e a VM (por padrão,
-      o diretório do projeto aparece em \texttt{/vagrant}). \\
-    Rede & \texttt{forwarded\_port} (redireciona uma porta do host para a VM) e
-      \texttt{private\_network} (rede privada com IP fixo entre as VMs). \\
-    \bottomrule
-  \end{tabularx}
-  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026) e HashiCorp (2026).}
-\end{table}
-
-\subsubsection{Para que o Vagrant foi utilizado na disciplina}
-
-O Vagrant foi a base de todo o laboratório. Na primeira prática, ele foi usado para criar uma VM
-Rocky Linux com o servidor web Apache instalado automaticamente, servindo uma página HTML que
-podia ser acessada pelo navegador do Windows (fluxo: Windows $\rightarrow$ VMware $\rightarrow$
-Vagrant $\rightarrow$ Rocky Linux $\rightarrow$ Apache $\rightarrow$ página HTML). Depois, o mesmo
-padrão foi reaproveitado para criar todos os servidores das práticas seguintes: o
-\texttt{control-node}, o \texttt{app01} e o \texttt{db01} do laboratório de Ansible, e as VMs
-\texttt{docker-notes}, \texttt{sonarqube} e \texttt{jenkins}.
-
-\subsubsection{Box, provider, máquinas, hostnames, IPs e portas}
+Na disciplina, o Vagrant foi a base de todo o laboratório. Na primeira prática, ele criou uma VM com o
+Apache instalado automaticamente, servindo uma página HTML acessada pelo navegador do Windows em
+\url{http://localhost:8080}. Depois, o mesmo padrão -- um diretório com \texttt{Vagrantfile} e
+\texttt{provision.sh} para cada servidor -- foi usado para criar todas as VMs das práticas seguintes:
 
 \begin{itemize}
-  \item \textbf{Box utilizada}: \texttt{generic/rocky9}, que entrega um Rocky Linux 9 (distribuição
-        compatível com o Red Hat Enterprise Linux), com gerenciador de pacotes \texttt{dnf},
-        \texttt{systemd} e \texttt{firewalld}. Nos slides também aparece o exemplo
-        \texttt{centos/7}, mas todas as VMs do laboratório usaram a Rocky 9.
-  \item \textbf{Provider}: na primeira aula foi apresentado o VirtualBox; a partir da Aula 3 o
-        laboratório passou a usar o \textbf{VMware Workstation}, por meio do \textit{plugin}
-        \texttt{vagrant-vmware-desktop} e do serviço \textit{Vagrant VMware Utility} instalado no
-        Windows (Código~\ref{cod:plugin-vmware}). No \texttt{Vagrantfile}, o bloco
-        \cod|config.vm.provider "vmware_desktop"| define memória e CPUs da VM.
-  \item \textbf{Quantidade de VMs}: sete máquinas ao longo da disciplina (Tabela~\ref{tab:maquinas}):
-        uma no laboratório inicial, três no laboratório de Ansible (\texttt{control-node},
-        \texttt{app01} e \texttt{db01}) e uma para cada ferramenta seguinte (Docker, SonarQube e Jenkins).
-  \item \textbf{Hostnames}: \texttt{control-node}, \texttt{app01}, \texttt{db01},
-        \texttt{docker-notes}, \texttt{sonarqube} e \texttt{jenkins}, definidos com
-        \cod|config.vm.hostname|. A VM do primeiro laboratório manteve o nome padrão da \textit{box}.
-  \item \textbf{IPs}: rede privada \texttt{192.168.1.0/24}, do \texttt{192.168.1.2} ao
-        \texttt{192.168.1.7}. A VM do primeiro laboratório usou apenas a rede NAT padrão.
-  \item \textbf{Portas redirecionadas}: \texttt{80$\rightarrow$8080} (Apache do laboratório 1 e
-        \texttt{app01}), \texttt{3306$\rightarrow$3306} (MariaDB no \texttt{db01}),
-        \texttt{8080$\rightarrow$8082} (container no \texttt{docker-notes}),
-        \texttt{9000$\rightarrow$9000} (SonarQube) e \texttt{8080$\rightarrow$8081} (Jenkins). As portas
-        do host foram escolhidas acima de 1024 e sem repetição, para que as VMs pudessem ficar ligadas
-        ao mesmo tempo sem colisão.
+  \item \textbf{Box}: \texttt{generic/rocky9} (Rocky Linux 9, compatível com o Red Hat).
+  \item \textbf{Provider}: VirtualBox na primeira aula e, a partir da Aula 3, \textbf{VMware
+        Workstation}, com o \textit{plugin} \path{vagrant-vmware-desktop}
+        (\cod|vagrant plugin install vagrant-vmware-desktop|) e o serviço Vagrant VMware Utility.
+  \item \textbf{Máquinas}: sete VMs ao longo da disciplina, com os \textit{hostnames}, IPs e portas
+        redirecionadas da Tabela~\ref{tab:maquinas}. As portas do host ficaram acima de 1024 e sem
+        repetição, para que várias VMs pudessem ficar ligadas ao mesmo tempo.
 \end{itemize}
-
-\begin{terminal}[caption={Instalação e verificação do \textit{provider} VMware no Windows (PowerShell)},label={cod:plugin-vmware}]
-vagrant plugin install vagrant-vmware-desktop   # plugin do Vagrant para o VMware
-vagrant plugin list                             # confirma o plugin instalado
-Get-Service vagrant-vmware-utility              # confirma o serviço Vagrant VMware Utility
-vagrant up --provider=vmware_desktop            # sobe a VM usando o VMware
-\end{terminal}
 
 \subsubsection{Explicação do Vagrantfile}
 
-O Código~\ref{cod:vagrantfile-lab1} mostra o \texttt{Vagrantfile} do primeiro laboratório. Ele é
-interpretado pelo Vagrant como um script Ruby: tudo o que está dentro do bloco
-\cod!Vagrant.configure("2") do |config| ... end! descreve a máquina, e o \texttt{"2"} indica a
-versão do formato de configuração.
-
-\codigo{Ruby}{01-vagrant-lab/Vagrantfile}{Vagrantfile do laboratório 1 (Apache)}{vagrantfile-lab1}
-
-\begin{itemize}
-  \item \cod|config.vm.box = "generic/rocky9"|: escolhe a \textit{box} (imagem base) da VM.
-  \item \cod|config.vm.synced_folder ".", "/vagrant"|: compartilha a pasta do projeto no Windows
-        com o diretório \texttt{/vagrant} da VM. Foi assim que a página HTML chegou ao servidor.
-  \item \cod|config.vm.network "forwarded_port", ...|: redireciona a porta 8080 do Windows
-        (\texttt{host}) para a porta 80 da VM (\texttt{guest}). Com \cod|host_ip: "127.0.0.1"|, o
-        acesso fica restrito ao próprio computador (\texttt{localhost}).
-  \item \cod|config.vm.provision "shell", path: "provision.sh"|: executa o script de
-        provisionamento automaticamente no primeiro \cod|vagrant up| (ou com \cod|--provision|).
-  \item \cod!config.vm.provider "vmware_desktop" do |v| ... end!: ajusta o \textit{hardware} virtual
-        no VMware, com \texttt{memsize} (memória em MB) e \texttt{numvcpus} (quantidade de CPUs).
-\end{itemize}
-
-O script de provisionamento (Código~\ref{cod:provision-lab1}) instala o Apache com o \texttt{dnf},
-copia a página da pasta compartilhada para \texttt{/var/www/html}, habilita e inicia o serviço
-\texttt{httpd} e libera o serviço \texttt{http} (porta 80) no \texttt{firewalld}. Sem a liberação no
-\textit{firewall}, o Apache funcionaria dentro da VM (\cod|curl localhost|), mas não responderia pelo
-redirecionamento de porta.
-
-\codigo{bash}{01-vagrant-lab/provision.sh}{Script de provisionamento do laboratório 1}{provision-lab1}
-
-Nos laboratórios seguintes, os \texttt{Vagrantfile} ganharam duas linhas importantes:
-\cod|config.vm.hostname|, que define o nome da máquina, e
-\cod|config.vm.network "private_network", ip: "..."|, que cria a rede privada com IP fixo usada
-para a comunicação entre as VMs. O Código~\ref{cod:vagrantfile-app01} mostra o exemplo do
-\texttt{app01}; os do \texttt{db01} e do \texttt{control-node} seguem o mesmo modelo, mudando o
-nome, o IP e as portas.
+O Código~\ref{cod:vagrantfile-app01} mostra o \texttt{Vagrantfile} do servidor \texttt{app01}; os das
+outras VMs seguem o mesmo modelo, mudando nome, IP e portas.
 
 \codigo{Ruby}{02-ansible-lab/app01/Vagrantfile}{Vagrantfile do servidor app01}{vagrantfile-app01}
 
-A organização em um diretório por máquina, mostrada na Figura~\ref{fig:dir-ansible-lab}, permite
-subir, desligar ou destruir cada servidor separadamente. A pasta \texttt{.vagrant/} é criada
-automaticamente pelo Vagrant (guarda o ID e o estado da VM) e \textbf{não} deve ser versionada.
+\begin{itemize}
+  \item \cod|Vagrant.configure("2")|: abre o bloco de configuração (versão 2 do formato).
+  \item \cod|config.vm.box|: define a \textit{box}, baixada uma única vez e clonada para cada VM.
+  \item \cod|config.vm.hostname|: define o nome da máquina.
+  \item \cod|"private_network", ip: ...|: cria a rede privada com IP fixo, usada na comunicação
+        entre as VMs.
+  \item \cod|"forwarded_port", guest: 80, host: 8080|: redireciona a porta 8080 do Windows para a
+        porta 80 da VM.
+  \item \cod|config.vm.provision "shell", path: "provision.sh"|: executa o script de
+        provisionamento no primeiro \cod|vagrant up|. No primeiro laboratório ele instalava o Apache
+        e liberava a porta 80 no \textit{firewall}; no \texttt{app01} e no \texttt{db01}, ele
+        autoriza a chave SSH do \textit{control-node} (Seção~\ref{sec:ansible}).
+  \item \cod|config.vm.provider "vmware_desktop"|: ajusta, no VMware, a quantidade de memória
+        (\texttt{memsize}) e de CPUs (\texttt{numvcpus}) da VM.
+\end{itemize}
 
-\begin{figure}[H]
-  \centering
-  \caption{Estrutura de diretórios do laboratório de Ansible: um Vagrantfile por máquina}
-  \label{fig:dir-ansible-lab}
-  \begin{minipage}{0.62\linewidth}
-    \dirtree{%
-      .1 ansible-lab/.
-      .2 control-node/ \DTcomment{máquina de controle (Ansible)}.
-      .3 {.}vagrant/ \DTcomment{gerada pelo Vagrant (não versionar)}.
-      .3 ansible/ \DTcomment{projeto Ansible (Seção~\ref{sec:ansible})}.
-      .3 provision{.}sh.
-      .3 Vagrantfile.
-      .2 app01/ \DTcomment{servidor de aplicação}.
-      .3 provision{.}sh.
-      .3 Vagrantfile.
-      .2 db01/ \DTcomment{servidor de banco de dados}.
-      .3 provision{.}sh.
-      .3 Vagrantfile.
-    }
-  \end{minipage}
-  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
-\end{figure}
+Além disso, \cod|config.vm.synced_folder ".", "/vagrant"| compartilha a pasta do projeto com a VM;
+foi assim que a página HTML do primeiro laboratório e os arquivos do Ansible chegaram às máquinas.
 
 \subsubsection{Comandos utilizados}
-
-A Tabela~\ref{tab:comandos-vagrant} resume os comandos do Vagrant usados no dia a dia do
-laboratório, sempre executados no terminal do Windows, dentro da pasta que contém o
-\texttt{Vagrantfile}.
 
 \begin{table}[H]
   \centering
   \caption{Comandos do Vagrant utilizados}\label{tab:comandos-vagrant}
   \small
-  \renewcommand{\arraystretch}{1.2}
+  \renewcommand{\arraystretch}{1.15}
   \begin{tabularx}{\linewidth}{>{\ttfamily}l >{\raggedright\arraybackslash}X}
     \toprule
-    \normalfont\bfseries Comando & \textbf{O que faz / quando usar} \\
+    \normalfont\bfseries Comando & \textbf{O que faz} \\
     \midrule
     vagrant init & Cria um \texttt{Vagrantfile} inicial no diretório atual. \\
-    vagrant up & Cria e inicia a VM (se já existir e estiver desligada, apenas liga). Na primeira
-      vez, baixa a \textit{box} e executa o provisionamento. \\
+    vagrant up & Cria e inicia a VM; na primeira vez, baixa a \textit{box} e executa o provisionamento. \\
     vagrant status & Mostra o estado da VM (\textit{running}, \textit{poweroff}, \textit{not created}). \\
-    vagrant global-status & Lista todas as VMs gerenciadas pelo Vagrant no computador. \\
-    vagrant ssh & Abre um terminal SSH dentro da VM (usuário \texttt{vagrant}). \\
-    vagrant halt & Desliga a VM de forma segura, sem apagá-la. \\
-    vagrant reload & Reinicia a VM aplicando alterações do \texttt{Vagrantfile} (rede, portas,
-      recursos). Com \texttt{-{}-provision}, executa o provisionamento de novo. \\
-    vagrant destroy -f & Apaga completamente a VM (a \textit{box} continua salva). Útil para recriar
-      o ambiente do zero. \\
-    vagrant port & Lista os redirecionamentos de porta ativos. \\
-    vagrant ssh-config & Mostra porta, usuário e chave privada usados no SSH (útil para \texttt{scp}). \\
-    vagrant upload & Copia um arquivo do Windows para dentro da VM. \\
+    vagrant ssh & Abre um terminal dentro da VM. \\
+    vagrant halt & Desliga a VM sem apagá-la. \\
+    vagrant reload & Reinicia a VM aplicando mudanças do \texttt{Vagrantfile} (com \texttt{-{}-provision}, reexecuta o script). \\
+    vagrant destroy -f & Apaga a VM (a \textit{box} continua salva) para recriar o ambiente do zero. \\
     \bottomrule
   \end{tabularx}
   \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
 \end{table}
 
-Para validar o primeiro laboratório, foram executados os testes do Código~\ref{cod:testes-vagrant},
-dentro da VM e no Windows.
+Para validar o primeiro laboratório, dentro da VM foram usados \cod|curl localhost| e
+\cod|sudo systemctl status httpd|, e no Windows o acesso a \url{http://localhost:8080}.
 
-\begin{terminal}[caption={Testes de funcionamento do Apache na VM e no Windows},label={cod:testes-vagrant}]
-# Dentro da VM (vagrant ssh)
-curl localhost                          # o Apache responde com a página HTML
-sudo systemctl status httpd             # serviço ativo (running)
-sudo ss -tulpn                          # porta 80 em escuta
-sudo firewall-cmd --list-services       # serviço http liberado
-ls /vagrant /var/www/html               # pasta compartilhada e página publicada
+\printtela{vagrant-up}{Criação e provisionamento de uma VM com \texttt{vagrant up}}%
+  {Terminal (PowerShell) com a saída do \texttt{vagrant up}: criação da VM com o provider
+   \texttt{vmware\_desktop}, redirecionamento de porta e mensagens do \texttt{provision.sh}.}
 
-# No Windows (PowerShell, na pasta do Vagrantfile)
-vagrant port                            # 80 (guest) => 8080 (host)
-curl.exe http://127.0.0.1:8080          # ou http://localhost:8080 no navegador
-\end{terminal}
-
-\subsubsection{Evidências da execução}
-
-\printtela{vagrant-up}{Execução do comando \texttt{vagrant up} criando e provisionando a VM}%
-  {Terminal (PowerShell) com a saída do \texttt{vagrant up} -- mostrar a criação da VM com o
-   provider \texttt{vmware\_desktop}, o redirecionamento de porta e as mensagens do
-   \texttt{provision.sh} (ex.: ``Instalando o Apache e configurando...'').}
-
-\printtela{vagrant-status}{Saída dos comandos \texttt{vagrant status} e \texttt{vagrant global-status}}%
-  {Terminal mostrando as VMs do laboratório no estado \textit{running} (de preferência
-   \texttt{vagrant global-status}, que lista control-node, app01 e db01 de uma vez).}
-
-\printtela{vagrant-ssh}{Acesso à VM com \texttt{vagrant ssh}}%
-  {Terminal dentro da VM após \texttt{vagrant ssh} (prompt \texttt{[vagrant@control-node \textasciitilde]\$})
-   executando \texttt{hostname} e \texttt{ip a} (mostrando o IP 192.168.1.x).}
-
-\printtela{vagrant-apache}{Página HTML servida pelo Apache, acessada pelo navegador do Windows}%
-  {Navegador aberto em \texttt{http://localhost:8080} exibindo a página do laboratório 1.}
-
-\subsubsection{Pontos de atenção}
-
-Durante as práticas, alguns cuidados se mostraram importantes \citep{muniz2026}:
-
-\begin{itemize}
-  \item \cod|vagrant destroy| apaga a máquina, mas não a \textit{box}; recriar a VM é rápido.
-  \item Alterações no \texttt{provision.sh} não são aplicadas automaticamente em uma VM já
-        criada: é preciso usar \cod|vagrant reload --provision| ou \cod|vagrant destroy -f| seguido
-        de \cod|vagrant up|. Alterações no \texttt{Vagrantfile} exigem \cod|vagrant reload|.
-  \item As portas do lado do host devem ficar acima de 1024 e não podem se repetir entre VMs ligadas
-        ao mesmo tempo.
-  \item Com o VMware, o \textit{plugin} \path{vagrant-vmware-desktop} e o serviço
-        \path{vagrant-vmware-utility} precisam estar instalados e em execução; quando a VM não
-        aparece na interface do VMware, é possível abri-la manualmente pelo arquivo \texttt{.vmx}
-        que fica dentro de \path{.vagrant/machines/default/vmware_desktop/}.
-\end{itemize}
+\printtela{vagrant-status}{VMs do laboratório em execução}%
+  {Terminal com \texttt{vagrant global-status} (ou \texttt{vagrant status}) mostrando as VMs no
+   estado \textit{running}.}
 
 \subsubsection{O papel do Vagrant na criação de ambientes reprodutíveis}
 
-Na prática, o Vagrant transformou a criação de servidores em algo previsível. Como toda a
-configuração fica no \texttt{Vagrantfile} e no \texttt{provision.sh}, foi possível destruir e
-recriar as máquinas várias vezes durante o semestre -- por exemplo, para reaplicar a chave SSH no
-laboratório de Ansible -- e o resultado era sempre o mesmo. Isso é o que torna o ambiente
-\textbf{reprodutível}: qualquer colega (ou o professor) que clone o repositório e execute
-\cod|vagrant up| obtém exatamente as mesmas máquinas, com o mesmo sistema, IPs, portas e pacotes.
-Para um laboratório de DevOps isso é essencial, porque permite errar, testar e voltar ao estado
-inicial sem medo, e porque aproxima o ambiente de estudo da forma como a infraestrutura é tratada
-nas empresas: como código, versionado e automatizado.
+Como toda a configuração fica no \texttt{Vagrantfile} e no \texttt{provision.sh}, foi possível
+destruir e recriar as máquinas várias vezes durante o semestre -- por exemplo, para reaplicar a chave
+SSH no laboratório de Ansible -- e o resultado era sempre o mesmo. Isso torna o ambiente
+\textbf{reprodutível}: qualquer pessoa que clone o repositório e execute \cod|vagrant up| obtém as
+mesmas máquinas, com o mesmo sistema, IPs, portas e pacotes. Em um laboratório de DevOps, isso permite
+errar, testar e voltar ao estado inicial sem medo, tratando a infraestrutura como código.

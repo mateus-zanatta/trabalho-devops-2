@@ -3,10 +3,8 @@
 % =====================================================================
 \subsection{Integração entre as ferramentas}\label{sec:integracao}
 
-Ao longo da disciplina, cada ferramenta foi estudada separadamente, mas o objetivo final era
-entender como elas se combinam para formar uma esteira DevOps. A Figura~\ref{fig:integracao} mostra
-essa visão de conjunto no laboratório, e a Tabela~\ref{tab:fases-ferramentas} relaciona as etapas do
-ciclo DevOps com as ferramentas utilizadas.
+Cada ferramenta foi estudada separadamente, mas o objetivo final era entender como elas se combinam
+em uma esteira DevOps (Figura~\ref{fig:integracao} e Tabela~\ref{tab:fases-ferramentas}).
 
 \begin{figure}[H]
   \centering
@@ -49,36 +47,27 @@ ciclo DevOps com as ferramentas utilizadas.
   \centering
   \caption{Etapas do ciclo DevOps e ferramentas utilizadas no laboratório}\label{tab:fases-ferramentas}
   \small
-  \renewcommand{\arraystretch}{1.22}
+  \renewcommand{\arraystretch}{1.18}
   \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.3cm} l >{\raggedright\arraybackslash}X}
     \toprule
     \textbf{Etapa} & \textbf{Ferramenta} & \textbf{Como foi usada} \\
     \midrule
-    Codificar e versionar & Git e GitHub & Versionamento do código, dos \texttt{Vagrantfile}, dos \textit{playbooks}, do \texttt{Dockerfile} e do \texttt{Jenkinsfile}. \\
-    Provisionar a infraestrutura & Vagrant + VMware & Criação reprodutível de todas as VMs a partir de arquivos de texto. \\
-    Configurar servidores & Ansible & Preparação do sistema, MariaDB no \texttt{db01}, Java/Maven e \textit{deploy} da aplicação no \texttt{app01}. \\
+    Codificar e versionar & Git e GitHub & Versionamento do código e de toda a configuração do laboratório. \\
+    Provisionar a infraestrutura & Vagrant + VMware & Criação reprodutível das VMs a partir de arquivos de texto. \\
+    Configurar servidores & Ansible & Preparação do sistema, MariaDB no \texttt{db01} e \textit{deploy} da aplicação no \texttt{app01}. \\
     \textit{Build} e testes & Maven (no Jenkins) & Compilação, empacotamento e testes a cada alteração. \\
     Qualidade e segurança & SonarQube & Análise estática e Quality Gate antes do empacotamento. \\
-    Empacotar (\textit{release}) & Docker & Imagem da aplicação com todas as dependências. \\
-    \textit{Deploy} & Jenkins + Docker & Substituição automática do container e teste de fumaça. \\
-    Operar e monitorar & \texttt{systemd}, logs, \texttt{curl} & \texttt{systemctl status}, \texttt{journalctl}, \texttt{docker logs} e testes da API. \\
+    Empacotar e \textit{deploy} & Docker + Jenkins & Imagem da aplicação e troca automática do container. \\
+    Operar e monitorar & \texttt{systemd}, logs, \texttt{curl} & Verificação dos serviços e testes da API. \\
     \bottomrule
   \end{tabularx}
   \fonte{Elaborado pelo autor (2026).}
 \end{table}
 
-Na prática, o caminho de uma alteração no laboratório fica assim: o desenvolvedor altera o código e
-faz \cod|git push|; o Jenkins detecta o novo \textit{commit}, clona o repositório, compila e testa a
-aplicação -- inclusive contra o banco do \texttt{db01}, que foi configurado pelo Ansible em uma VM
-criada pelo Vagrant --; em seguida, o SonarQube analisa o código e o Quality Gate decide se ele pode
-seguir. Se for aprovado, o Docker empacota a aplicação em uma imagem e o Jenkins a coloca no ar e
-verifica se a API responde. Se algo falhar em qualquer etapa, o \textit{pipeline} para, o problema
-fica registrado no log e quem fez a alteração recebe o \textit{feedback} rapidamente.
-
-O ponto mais importante dessa integração é que \textbf{tudo é código}. As máquinas estão descritas
-nos \texttt{Vagrantfile}, a configuração dos servidores nos \textit{playbooks}, a imagem da aplicação
-no \texttt{Dockerfile} e o próprio processo de entrega no \texttt{Jenkinsfile} -- e tudo isso está
-versionado no Git.
-Isso torna o ambiente reprodutível, auditável e fácil de evoluir -- um próximo passo natural seria,
-por exemplo, o Jenkins executar os \textit{playbooks} do Ansible para atualizar os servidores, ou
-publicar a imagem em um \textit{registry} para ser executada em um orquestrador como o Kubernetes.
+Na prática, o caminho de uma alteração fica assim: o desenvolvedor faz \cod|git push|; o Jenkins
+detecta o novo \textit{commit}, compila e testa a aplicação contra o banco do \texttt{db01} --
+configurado pelo Ansible em uma VM criada pelo Vagrant --; o SonarQube analisa o código e o Quality
+Gate decide se ele pode seguir; se aprovado, o Docker empacota a aplicação e o Jenkins a coloca no ar.
+Se algo falha, o \textit{pipeline} para e o \textit{feedback} chega rápido. O ponto central é que
+\textbf{tudo é código} versionado no Git -- as máquinas, a configuração, a imagem e o próprio processo
+de entrega --, o que torna o ambiente reprodutível e fácil de evoluir.

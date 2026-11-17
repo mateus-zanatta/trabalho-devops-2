@@ -28,44 +28,30 @@ A caixa é substituída automaticamente pela imagem. Não é preciso mexer no c�
 **Antes de salvar qualquer print:** borre/tarje senhas, *tokens* (SonarQube, Jenkins) e nunca
 mostre a chave privada SSH (`id_rsa`).
 
-### Lista de prints (34)
+### Lista de prints (20)
 
 | # | Arquivo (`prints/...png`) | Seção | O que capturar |
 |---|---|---|---|
 | 1 | `vagrant-up` | Vagrant | Saída do `vagrant up` criando a VM (provider `vmware_desktop`, porta redirecionada, mensagens do `provision.sh`) |
-| 2 | `vagrant-status` | Vagrant | `vagrant status` / `vagrant global-status` com as VMs em *running* |
-| 3 | `vagrant-ssh` | Vagrant | Dentro da VM após `vagrant ssh`, com `hostname` e `ip a` |
-| 4 | `vagrant-apache` | Vagrant | Navegador em `http://localhost:8080` mostrando a página do laboratório 1 |
-| 5 | `github-repositorio` | Git | Página do repositório no GitHub |
-| 6 | `git-status` | Git | Saída do `git status` |
-| 7 | `git-log` | Git | `git log --oneline --graph` com os commits |
-| 8 | `git-push` | Git | Saída do `git push` (ou aba *Commits* do GitHub) |
-| 9 | `github-arquivo` | Git | Um arquivo versionado aberto no GitHub (ex.: `Vagrantfile` ou `db.yml`) |
-| 10 | `ansible-inventario` | Ansible | `cat inventory/hosts.ini` (ou `ansible-inventory --graph`) no control-node |
-| 11 | `ansible-ssh-keygen` | Ansible | Saída do `ssh-keygen` e do `cat ~/.ssh/id_rsa.pub` (**sem** a chave privada) |
-| 12 | `ansible-ping` | Ansible | `ansible all -m ping` com `SUCCESS` / `pong` para app01 e db01 |
-| 13 | `ansible-db-playbook` | Ansible | Execução do `ansible-playbook playbooks/db.yml` com o PLAY RECAP |
-| 14 | `ansible-idempotencia` | Ansible | Segunda execução do `db.yml` com `changed=0` (ou o menor valor) |
-| 15 | `ansible-app-playbook` | Ansible | Execução do `ansible-playbook playbooks/app.yml` (debug do JAR, handlers, PLAY RECAP) |
-| 16 | `ansible-notes-status` | Ansible | `sudo systemctl status notes` no app01 (`active (running)`) |
-| 17 | `ansible-api-curl` | Ansible | `curl -X POST` criando uma nota e `curl` GET em `/api/notes` |
-| 18 | `ansible-mariadb` | Ansible | No db01: `systemctl status mariadb` e/ou `SELECT` na tabela `notes` |
-| 19 | `ansible-arquivos-yml` | Ansible | VS Code com a árvore do projeto `ansible/` e um `.yml` aberto |
-| 20 | `docker-build` | Docker | Saída do `docker build -t devops/notes .` com sucesso |
-| 21 | `docker-ps` | Docker | `docker images` e `docker ps` (container `notes` em execução) |
-| 22 | `docker-api` | Docker | `curl http://localhost:8080/api/notes` respondendo a partir do container |
-| 23 | `sonar-inicial` | SonarQube | Tela inicial do SonarQube em `http://127.0.0.1:9000` |
-| 24 | `sonar-projeto` | SonarQube | Projeto *Easy Notes* (`easy-notes`) criado |
-| 25 | `sonar-token` | SonarQube | Geração do token **com o valor borrado** |
-| 26 | `sonar-scanner-exec` | SonarQube | Final da saída do `sonar-scanner` (`ANALYSIS SUCCESSFUL` / `EXECUTION SUCCESS`) |
-| 27 | `sonar-dashboard` | SonarQube | *Overview* do projeto com o Quality Gate e as métricas |
-| 28 | `sonar-issues` | SonarQube | Aba *Issues* com os apontamentos |
-| 29 | `jenkins-inicial` | Jenkins | Dashboard do Jenkins com os jobs |
-| 30 | `jenkins-primeiro-job` | Jenkins | Configuração do `primeiro-job` (passo *Execute shell*) |
-| 31 | `jenkins-job-console` | Jenkins | *Console Output* do primeiro job com `Finished: SUCCESS` |
-| 32 | `jenkins-pipeline-sucesso` | Jenkins | Visualização dos *stages* do pipeline, todos em verde |
-| 33 | `jenkins-pipeline-logs` | Jenkins | *Console Output* do pipeline |
-| 34 | `jenkins-jenkinsfile` | Jenkins | Configuração do job com o `Jenkinsfile` visível |
+| 2 | `vagrant-status` | Vagrant | `vagrant global-status` (ou `vagrant status`) com as VMs em *running* |
+| 3 | `github-repositorio` | Git | Página do repositório no GitHub com os arquivos versionados e o último commit |
+| 4 | `git-status-log` | Git | Terminal com `git status` e `git log --oneline` |
+| 5 | `git-push` | Git | Saída do `git push` (ou aba *Commits* do GitHub) |
+| 6 | `ansible-inventario` | Ansible | `cat inventory/hosts.ini` (ou `ansible-inventory --graph`) no control-node |
+| 7 | `ansible-ping` | Ansible | `ansible all -m ping` com `SUCCESS` / `pong` para app01 e db01 |
+| 8 | `ansible-db-playbook` | Ansible | Execução do `ansible-playbook playbooks/db.yml` com o PLAY RECAP |
+| 9 | `ansible-app-playbook` | Ansible | Execução do `ansible-playbook playbooks/app.yml` com o PLAY RECAP |
+| 10 | `ansible-servico` | Ansible | No app01: `sudo systemctl status notes` (`active (running)`) e o `curl` na API |
+| 11 | `ansible-arquivos-yml` | Ansible | VS Code com a árvore do projeto `ansible/` e um `.yml` aberto |
+| 12 | `docker-container` | Docker | `docker images`, `docker ps` (container `notes` em execução) e `curl` na API |
+| 13 | `sonar-token` | SonarQube | Geração do token **com o valor borrado** |
+| 14 | `sonar-scanner-exec` | SonarQube | Final da saída do `sonar-scanner` (`ANALYSIS SUCCESSFUL` / `EXECUTION SUCCESS`) |
+| 15 | `sonar-dashboard` | SonarQube | *Overview* do projeto com o Quality Gate e as métricas |
+| 16 | `sonar-issues` | SonarQube | Aba *Issues* com os apontamentos |
+| 17 | `jenkins-inicial` | Jenkins | Dashboard do Jenkins com os jobs criados |
+| 18 | `jenkins-pipeline-stages` | Jenkins | Visualização dos *stages* do pipeline, todos em verde |
+| 19 | `jenkins-console` | Jenkins | *Console Output* de um build com `Finished: SUCCESS` |
+| 20 | `jenkins-jenkinsfile` | Jenkins | Configuração do job com o `Jenkinsfile` visível |
 
 ## 3. O que você precisa conferir e completar
 
@@ -73,7 +59,7 @@ O PDF destaca em **amarelo** (`[PREENCHER: ...]`) o que só você pode informar.
 os pontos de atenção estão marcados com comentários `% CONFIRA` ou `% ATENÇÃO`.
 
 - **`main.tex`** – confira seu nome completo e o nome do curso (macros `\autor` e `\curso`).
-- **SonarQube (`secoes/07-sonarqube.tex`)** – preencha a Tabela 11 com os números do **seu**
+- **SonarQube (`secoes/07-sonarqube.tex`)** – preencha a Tabela 3 com os números do **seu**
   dashboard e ajuste a lista de apontamentos da aba *Issues* para os que aparecerem para você.
 - **Jenkins (`secoes/08-jenkins.tex`)** – não havia PDF da aula de Jenkins no repositório; a seção
   foi escrita com uma instalação padrão (VM `jenkins`, IP `192.168.1.7`, porta `8081` no Windows).

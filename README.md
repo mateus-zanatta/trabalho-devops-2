@@ -10,7 +10,7 @@ práticas com **Vagrant, Git e GitHub, Ansible, Docker, SonarQube e Jenkins** e 
 | `Aula *.pdf` | Material das aulas usado como base do relatório |
 | `relatorio/` | Projeto LaTeX para o Overleaf (arquivo principal: `main.tex`) |
 | `relatorio/codigos/` | Arquivos do laboratório: Vagrantfiles, scripts de provisionamento, projeto Ansible, Dockerfiles, SonarQube e Jenkinsfiles |
-| `relatorio/LEIA-ME.md` | Como subir no Overleaf, lista dos 34 prints e o que conferir antes da entrega |
+| `relatorio/LEIA-ME.md` | Como subir no Overleaf, lista dos 20 prints e o que conferir antes da entrega |
 | `relatorio-preview.pdf` | Prévia compilada do relatório (ainda com as caixas indicando onde entram os prints) |
 
 ## Próximos passos
