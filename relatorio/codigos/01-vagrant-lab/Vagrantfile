@@ -1,0 +1,20 @@
+# Laboratório 1 - Servidor web Apache criado e provisionado pelo Vagrant
+Vagrant.configure("2") do |config|
+  # Box (imagem base do sistema operacional): Rocky Linux 9
+  config.vm.box = "generic/rocky9"
+
+  # Pasta compartilhada: diretório do projeto (host) -> /vagrant (VM)
+  config.vm.synced_folder ".", "/vagrant"
+
+  # Redirecionamento de porta: 127.0.0.1:8080 (Windows) -> porta 80 (Apache na VM)
+  config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+
+  # Provisionamento: script executado automaticamente no primeiro "vagrant up"
+  config.vm.provision "shell", path: "provision.sh"
+
+  # Provider VMware (plugin vagrant-vmware-desktop): memória e CPUs da VM
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"]  = "1024"
+    v.vmx["numvcpus"] = "2"
+  end
+end

@@ -1,0 +1,8 @@
+---
+# Variáveis globais do projeto, importadas pelos playbooks com "vars_files".
+# As senhas abaixo são apenas marcadores: senhas reais NÃO devem ser versionadas.
+# Em um ambiente real, proteja este arquivo com: ansible-vault encrypt vars/main.yml
+mysql_root_password: "TROQUE_SENHA_ROOT"
+mysql_db_name: "notes"
+mysql_user: "notesapp"
+mysql_user_password: "TROQUE_SENHA_APP"

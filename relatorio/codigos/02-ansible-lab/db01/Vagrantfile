@@ -1,0 +1,15 @@
+# db01: servidor de banco de dados (Managed Host do Ansible)
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rocky9"
+  config.vm.hostname = "db01"
+
+  config.vm.network "private_network", ip: "192.168.1.4"
+  config.vm.network "forwarded_port", guest: 3306, host: 3306
+
+  config.vm.provision "shell", path: "provision.sh"
+
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"]  = "1024"
+    v.vmx["numvcpus"] = "2"
+  end
+end

@@ -1,0 +1,37 @@
+---
+# Role configuracao-default-so: preparação básica do sistema operacional.
+# É reutilizada pelos playbooks do db01 e do app01.
+
+- name: Upgrade de todos os pacotes do sistema operacional
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Instalar Git
+  dnf:
+    name: git
+    state: present
+
+- name: Instalar dependências do PyMySQL
+  dnf:
+    name:
+      - python3
+      - python3-pip
+      - python3-PyMySQL
+    state: present
+
+- name: Instalar cliente MariaDB
+  dnf:
+    name: mariadb
+    state: present
+
+- name: Garantir que o firewalld esteja instalado
+  dnf:
+    name: firewalld
+    state: present
+
+- name: Habilitar e iniciar o firewalld
+  systemd:
+    name: firewalld
+    state: started
+    enabled: true

@@ -1,0 +1,191 @@
+% =====================================================================
+%  2.2 Atividade com Git e GitHub
+% =====================================================================
+\subsection{Atividade com Git e GitHub}\label{sec:git}
+
+\subsubsection{O que é Git}
+
+O \textbf{Git} é um sistema de controle de versão \textbf{distribuído}: ele gerencia as mudanças
+feitas nos arquivos de um projeto e mantém um histórico completo de modificações, registrando
+\textbf{quem} alterou, \textbf{quando} alterou e \textbf{o que} foi alterado \citep{chacon2014}.
+Uma boa analogia, usada em aula, é a do \textit{snapshot} de máquina virtual: cada versão registrada
+é uma ``fotografia'' do estado do projeto naquele momento, o que permite voltar no tempo caso um
+erro seja introduzido \citep{muniz2026}. Com isso o Git oferece rastreabilidade (é possível saber
+qual linha mudou e por quê), evita a perda de código e permite que várias pessoas trabalhem no mesmo
+projeto sem sobrescrever o trabalho umas das outras. O \textbf{GitHub}, por sua vez, é uma plataforma
+\textit{on-line} que hospeda repositórios Git remotos e acrescenta recursos de colaboração, como
+\textit{pull requests}, \textit{issues} e automações.
+
+\subsubsection{Repositório local e repositório remoto}
+
+O \textbf{repositório local} fica no próprio computador, dentro da pasta oculta \texttt{.git}
+criada pelo \cod|git init| (ou pelo \cod|git clone|). Ele guarda todo o histórico do projeto, de
+modo que é possível criar versões, consultar o histórico e criar \textit{branches} mesmo sem internet.
+Como foi lembrado em aula, ``o Git mora dentro da pasta \texttt{.git}: se ela some, o Git também''.
+O \textbf{repositório remoto} é uma cópia hospedada em um servidor -- no nosso caso, o GitHub --,
+identificada normalmente pelo nome \texttt{origin}. Ele funciona como ponto central de sincronização
+da equipe e como \textit{backup}: como cada desenvolvedor tem uma cópia completa do repositório,
+mesmo que o servidor fique indisponível o código não se perde. A Figura~\ref{fig:fluxo-git} mostra
+as áreas do Git e os comandos que movem as alterações entre elas.
+
+\begin{figure}[H]
+  \centering
+  \caption{Áreas do Git e comandos que movem as alterações entre elas}\label{fig:fluxo-git}
+  \begin{tikzpicture}
+    \tikzset{area/.style={caixa, text width=2.25cm, minimum height=1.25cm}}
+    \node[area] (wd) {\textbf{Diretório de trabalho}\\{\scriptsize arquivos editados}};
+    \node[area, right=1.65cm of wd] (st) {\textbf{Área de preparação}\\{\scriptsize \textit{staging} (índice)}};
+    \node[area, right=1.65cm of st] (lr) {\textbf{Repositório local}\\{\scriptsize pasta \texttt{.git}}};
+    \node[caixalaranja, text width=2.25cm, minimum height=1.25cm, right=1.65cm of lr] (rr)
+         {\textbf{Repositório remoto}\\{\scriptsize GitHub (\texttt{origin})}};
+    \draw[seta] (wd.east) -- node[rotulo, above=1pt] {\texttt{git add}} (st.west);
+    \draw[seta] (st.east) -- node[rotulo, above=1pt] {\texttt{git commit}} (lr.west);
+    \draw[seta] ([yshift=4pt]lr.east) -- node[rotulo, above=1pt] {\texttt{git push}} ([yshift=4pt]rr.west);
+    \draw[seta] ([yshift=-4pt]rr.west) -- node[rotulo, below=1pt] {\texttt{git fetch}} ([yshift=-4pt]lr.east);
+    \draw[seta] (rr.south) -- ++(0,-0.75) -| node[rotulo, pos=0.25, below=1pt]
+         {\texttt{git pull} / \texttt{git clone}: trazem as alterações do remoto para o diretório de trabalho} (wd.south);
+    \begin{scope}[on background layer]
+      \node[draw=corprimaria!45, dashed, rounded corners=4pt, fit=(wd)(st)(lr), inner sep=7pt,
+            label={[font=\scriptsize\bfseries, text=corprimaria]above:Computador do desenvolvedor (repositório local)}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \fonte{Elaborado pelo autor (2026), com base em Chacon e Straub (2014).}
+\end{figure}
+
+\subsubsection{Commit, push, pull e branch}
+
+\begin{itemize}
+  \item \textbf{Commit}: registra no repositório local uma nova versão com as alterações que estavam
+        na área de preparação. Cada \textit{commit} tem um identificador único (\textit{hash}), autor,
+        data e uma mensagem que explica o que foi feito, por exemplo
+        \cod|git commit -m "Adiciona playbook do app01"|.
+  \item \textbf{Push}: envia os \textit{commits} do repositório local para o repositório remoto
+        (\cod|git push|), tornando-os visíveis para a equipe.
+  \item \textbf{Pull}: busca as alterações do repositório remoto e as integra à \textit{branch} local
+        (\cod|git pull| equivale a um \cod|git fetch| seguido de um \cod|git merge|).
+  \item \textbf{Branch}: é uma ramificação, ou seja, uma linha de desenvolvimento separada da principal
+        (\texttt{main}). Permite desenvolver uma funcionalidade ou corrigir um erro de forma isolada,
+        com \textit{commits} próprios, sem quebrar o código principal. Quando o trabalho termina, a
+        \textit{branch} é integrada de volta com \cod|git merge|.
+\end{itemize}
+
+Na disciplina também foi apresentado o \textbf{Git Flow}, um modelo de organização de
+\textit{branches} com cinco tipos: \texttt{main} (versões estáveis em produção, marcadas com
+\textit{tags} como \texttt{v1.0}), \texttt{develop} (integração do desenvolvimento),
+\texttt{feature} (novas funcionalidades, criadas a partir da \texttt{develop}), \texttt{release}
+(preparação de uma nova versão, com testes finais) e \texttt{hotfix} (correções urgentes que nascem
+da \texttt{main} e voltam para a \texttt{main} e para a \texttt{develop}). O Git Flow é indicado para
+projetos grandes, com vários ambientes e lançamentos programados; já o \textit{feature branching},
+mais simples, combina melhor com projetos menores e com integração contínua \citep{muniz2026}.
+
+\subsubsection{Como o Git foi utilizado nas atividades}
+
+Primeiro, o Git foi instalado e configurado com a identidade do autor, que fica gravada em cada
+\textit{commit}. Em seguida, foi criado um repositório no GitHub e o projeto local foi inicializado
+e ligado a ele, seguindo a sequência do Código~\ref{cod:git-sequencia}. Antes do primeiro
+\textit{commit} foi criado o arquivo \texttt{.gitignore} (Código~\ref{cod:gitignore}), para que
+arquivos que não devem ser publicados -- como a pasta \texttt{.vagrant/}, que guarda o estado
+local das VMs, logs e arquivos \texttt{.env} com segredos -- ficassem fora do repositório.
+
+\begin{terminal}[caption={Sequência de comandos usada para versionar o laboratório no GitHub},label={cod:git-sequencia}]
+git --version                                   # confirma a instalação
+git config --global user.name  "Seu Nome"       # identidade gravada nos commits
+git config --global user.email "seu@email.com"
+git config --global --list                      # confere a configuração
+
+cd lab-devops                                   # ATENÇÃO: dentro da pasta do projeto
+git init                                        # cria o repositório local (.git)
+echo "# Lab DevOps" > README.md
+git status                                      # mostra arquivos novos/alterados
+git add .                                       # adiciona tudo à área de preparação
+git commit -m "Primeiro commit do projeto"      # registra a primeira versão
+git branch -M main                              # renomeia a branch principal para main
+git remote add origin https://github.com/usuario/lab-devops.git
+git remote -v                                   # confere o repositório remoto
+git push -u origin main                         # envia os commits para o GitHub
+\end{terminal}
+
+% Conteúdo do arquivo codigos/.gitignore (inserido aqui porque o Overleaf pode ignorar arquivos ocultos)
+\begin{listagem}[language=ini,caption={[Arquivo .gitignore do laboratório]{Arquivo .gitignore do laboratório -- \nolinkurl{.gitignore}}},label={cod:gitignore}]
+# Arquivos que NÃO devem ir para o GitHub
+.vagrant/
+*.log
+.env
+.DS_Store
+\end{listagem}
+
+A partir daí, a cada etapa concluída (por exemplo, um novo \textit{playbook} ou um ajuste no
+\texttt{Vagrantfile}) o ciclo \cod|git status| $\rightarrow$ \cod|git add| $\rightarrow$
+\cod|git commit| $\rightarrow$ \cod|git push| foi repetido. Para alterações maiores foi usada uma
+\textit{branch} separada, integrada à \texttt{main} somente depois de testada
+(Código~\ref{cod:git-branch}). Este próprio relatório, junto com todos os arquivos do laboratório,
+está versionado no repositório \url{\repositorio}.
+
+\begin{terminal}[caption={Uso de branch para desenvolver uma alteração isolada},label={cod:git-branch}]
+git checkout -b feature/playbook-app            # cria a branch e muda para ela
+git add ansible/playbooks/app.yml
+git commit -m "Adiciona playbook de configuração do app01"
+git checkout main                               # volta para a branch principal
+git pull                                        # garante que a main está atualizada
+git merge feature/playbook-app                  # integra a alteração
+git push                                        # publica no GitHub
+git log --oneline --graph                       # histórico resumido
+\end{terminal}
+
+\subsubsection{Comandos utilizados}
+
+\begin{table}[H]
+  \centering
+  \caption{Comandos do Git utilizados}\label{tab:comandos-git}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{>{\ttfamily}l >{\raggedright\arraybackslash}X}
+    \toprule
+    \normalfont\bfseries Comando & \textbf{Função} \\
+    \midrule
+    git init & Cria um repositório Git na pasta atual. \\
+    git clone URL & Copia um repositório remoto (com todo o histórico) para o computador. \\
+    git status & Mostra arquivos novos, alterados e preparados para \textit{commit}. \\
+    git add . & Adiciona as alterações à área de preparação (\textit{staging}). \\
+    git commit -m "msg" & Salva uma nova versão no repositório local. \\
+    git remote add origin URL & Liga o repositório local ao remoto (GitHub). \\
+    git pull & Busca e integra as alterações do remoto. \\
+    git push & Envia os \textit{commits} locais para o remoto. \\
+    git branch & Lista ou cria \textit{branches}. \\
+    git checkout -b nome & Cria uma \textit{branch} e muda para ela. \\
+    git merge nome & Integra a \textit{branch} indicada na \textit{branch} atual. \\
+    git log -{}-oneline & Mostra o histórico de \textit{commits} de forma resumida. \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+\subsubsection{Evidências da execução}
+
+\printtela{github-repositorio}{Repositório do trabalho no GitHub}%
+  {Página do repositório no GitHub mostrando os arquivos e pastas versionados
+   (por exemplo, \texttt{relatorio/} e \texttt{README.md}) e o último \textit{commit}.}
+
+\printtela{git-status}{Saída do comando \texttt{git status}}%
+  {Terminal na pasta do projeto mostrando o \texttt{git status} (arquivos modificados/não rastreados
+   ou ``nothing to commit, working tree clean'').}
+
+\printtela{git-log}{Histórico de commits (\texttt{git log -{}-oneline})}%
+  {Terminal com \texttt{git log -{}-oneline -{}-graph} mostrando os \textit{commits} realizados.}
+
+\printtela{git-push}{Envio das alterações para o GitHub com \texttt{git push}}%
+  {Terminal com a saída do \texttt{git push} (ou a aba \textit{Commits} do GitHub com o histórico).}
+
+\printtela{github-arquivo}{Arquivo versionado visualizado no GitHub}%
+  {GitHub exibindo um arquivo versionado, por exemplo o \texttt{Vagrantfile} ou o
+   \texttt{playbooks/db.yml}, com o histórico de alterações.}
+
+\subsubsection{Por que o versionamento é importante em DevOps}
+
+No DevOps, o repositório Git é a ``fonte única da verdade'': tudo o que define o sistema -- o código
+da aplicação, os \texttt{Vagrantfile}, os \textit{playbooks} do Ansible, o \texttt{Dockerfile} e o
+\texttt{Jenkinsfile} -- fica versionado. Isso traz rastreabilidade (cada mudança tem autor, data e
+motivo), segurança para experimentar (é possível voltar a uma versão que funcionava), colaboração
+organizada por meio de \textit{branches} e revisões, e é a base da automação: os \textit{pipelines}
+de CI/CD são disparados justamente por um \textit{commit} ou \textit{push} no repositório. Sem
+versionamento, não existe Infraestrutura como Código nem integração contínua.

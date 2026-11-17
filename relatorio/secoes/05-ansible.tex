@@ -1,0 +1,514 @@
+% =====================================================================
+%  2.3 Atividade com Ansible
+% =====================================================================
+\subsection{Atividade com Ansible}\label{sec:ansible}
+
+\subsubsection{O que é o Ansible}
+
+O \textbf{Ansible} é uma ferramenta \textit{open source}, mantida pela Red Hat, para automação de
+TI: gerenciamento de configuração, provisionamento de servidores, \textit{deploy} de aplicações e
+orquestração de ambientes \citep{redhat2026}. Em vez de configurar máquina por máquina, o
+administrador descreve em arquivos YAML (os \textit{playbooks}) o estado desejado dos servidores --
+quais pacotes devem estar instalados, quais serviços devem estar rodando, quais arquivos devem
+existir -- e o Ansible executa tudo automaticamente. Suas principais características são a
+arquitetura \textbf{\textit{agentless}} (não é preciso instalar nenhum agente nos servidores
+gerenciados), a comunicação via \textbf{SSH} no Linux (ou WinRM no Windows), a sintaxe simples em
+YAML e a \textbf{idempotência}. O exemplo dado em aula resume bem a ideia: instalar o Java em dez
+servidores manualmente é demorado e sujeito a erro; com o Ansible, basta um \textit{playbook} e um
+único comando \citep{muniz2026}.
+
+\subsubsection{Infraestrutura como Código}
+
+\textbf{Infraestrutura como Código} (\textit{Infrastructure as Code}, IaC) é a prática de definir e
+gerenciar servidores, redes e configurações por meio de arquivos de texto, em vez de processos
+manuais. Esses arquivos podem ser versionados no Git, revisados, reutilizados e executados quantas
+vezes for necessário, sempre produzindo o mesmo ambiente. No laboratório, a IaC apareceu em duas
+camadas complementares: o \textbf{Vagrant} descreve e cria as máquinas virtuais
+(\texttt{Vagrantfile}), e o \textbf{Ansible} descreve e aplica a configuração dentro delas
+(\textit{playbooks} e \textit{roles}). Como destacado em aula: ``não estamos criando apenas pastas;
+estamos simulando servidores reais dentro de um ambiente automatizado'' \citep{muniz2026}.
+
+\subsubsection{Arquitetura: Control Node, Managed Hosts e inventário}
+
+A arquitetura do Ansible é composta por poucos elementos \citep{muniz2026,redhat2026}:
+
+\begin{itemize}
+  \item \textbf{Control Node}: máquina onde o Ansible está instalado e de onde os comandos e
+        \textit{playbooks} são executados. Ela armazena o inventário, os \textit{playbooks} e as
+        chaves SSH. No laboratório, é o \texttt{control-node} (\texttt{192.168.1.2}), o ``cérebro''
+        do ambiente.
+  \item \textbf{Managed Hosts}: servidores gerenciados pelo Ansible. Não precisam de agente, apenas
+        de SSH ativo e Python instalado. No laboratório, são o \texttt{app01} (\texttt{192.168.1.3},
+        servidor de aplicação) e o \texttt{db01} (\texttt{192.168.1.4}, servidor de banco de dados).
+  \item \textbf{Inventory} (inventário): arquivo que lista os servidores e os organiza em grupos.
+  \item \textbf{Playbook}: arquivo YAML com uma ou mais \textit{plays}; cada \textit{play} indica
+        em quais \textit{hosts} executar e quais tarefas (\textit{tasks}) aplicar.
+  \item \textbf{Task} e \textbf{módulo}: uma \textit{task} é uma ação no servidor (instalar um pacote,
+        criar um usuário, copiar um arquivo); ela é executada por um \textbf{módulo}, que é um
+        comando pronto do Ansible (\texttt{dnf}, \texttt{user}, \texttt{copy}, \texttt{service}\ldots).
+  \item \textbf{Role}: forma de organizar tarefas, variáveis, \textit{templates} e \textit{handlers}
+        em um módulo reutilizável.
+\end{itemize}
+
+O fluxo de execução é sempre o mesmo: o Ansible lê o inventário, conecta-se via SSH aos
+\textit{hosts}, envia e executa os módulos, aplica as configurações e retorna o resultado de cada
+tarefa. A Figura~\ref{fig:arquitetura-ansible} mostra como esses elementos foram distribuídos no
+laboratório.
+
+\begin{figure}[H]
+  \centering
+  \caption{Arquitetura do laboratório de Ansible}\label{fig:arquitetura-ansible}
+  \begin{tikzpicture}
+    \node[caixaescura, text width=4.2cm] (cn) {control-node\\{\normalfont\scriptsize 192.168.1.2 -- Ansible instalado}};
+    \node[caixa, text width=4.2cm, below=0.25cm of cn, font=\scriptsize, align=left] (arq)
+         {\texttt{inventory/hosts.ini}\\\texttt{playbooks/db.yml} e \texttt{app.yml}\\
+          \texttt{roles/} e \texttt{vars/}\\\texttt{\textasciitilde/.ssh/id\_rsa} (chave privada)};
+    \begin{scope}[on background layer]
+      \node[draw=corprimaria, fill=corprimaria!3, rounded corners=4pt, fit=(cn)(arq), inner sep=6pt] (cnbox) {};
+    \end{scope}
+    \node[caixalaranja, text width=3.9cm, minimum height=1.35cm, right=3.6cm of cn.north east, anchor=north west] (app)
+         {\textbf{app01} -- 192.168.1.3\\{\scriptsize Java 21, Maven e aplicação\\Easy Notes (porta 8080)}};
+    \node[caixalaranja, text width=3.9cm, minimum height=1.35cm, below=1.3cm of app] (db)
+         {\textbf{db01} -- 192.168.1.4\\{\scriptsize MariaDB (porta 3306)\\banco de dados \texttt{notes}}};
+    \draw[seta] ([yshift=0.45cm]cnbox.east) -- node[rotulo, above, sloped]{SSH (22)} node[rotulo, below, sloped]{\texttt{app.yml}} (app.west);
+    \draw[seta] ([yshift=-0.45cm]cnbox.east) -- node[rotulo, above, sloped]{SSH (22)} node[rotulo, below, sloped]{\texttt{db.yml}} (db.west);
+    \draw[seta, dashed, color=corverde] (app.south) -- node[rotulo, right=2pt]{JDBC (3306)} (db.north);
+    \node[font=\scriptsize\bfseries, text=corprimaria, above=1pt of cnbox] {Control Node};
+    \node[font=\scriptsize\bfseries, text=cordestaque, above=1pt of app] {Managed Hosts};
+  \end{tikzpicture}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{figure}
+
+\subsubsection{Preparação do control-node}
+
+O \texttt{control-node} foi criado pelo Vagrant com o script do Código~\ref{cod:provision-cn}. Ele
+instala o repositório EPEL (\textit{Extra Packages for Enterprise Linux}), que fornece o pacote do
+Ansible para o Rocky Linux, instala o Ansible e acrescenta ao \texttt{/etc/hosts} os nomes das três
+máquinas. Assim, o \textit{control-node} consegue alcançar os servidores pelo nome (\texttt{app01} e
+\texttt{db01}) em vez do IP. A pasta do projeto no Windows fica disponível na VM em
+\texttt{/vagrant}, de modo que os arquivos do Ansible podiam ser editados no VS Code e executados
+diretamente no \textit{control-node}.
+
+\codigo{bash}{02-ansible-lab/control-node/provision.sh}{Provisionamento do control-node}{provision-cn}
+
+\subsubsection{Comunicação via SSH}
+
+Com o Ansible instalado, o primeiro teste de conectividade, \cod|ansible -m ping all|, falhou com
+\textit{Permission denied}: os servidores ainda não confiavam no \textit{control-node}, porque não
+existia autenticação por chave. A solução foi configurar a autenticação SSH por par de chaves
+(assimétrica), que é a forma recomendada -- autenticação por senha não é indicada \citep{muniz2026}:
+
+\begin{enumerate}
+  \item No \texttt{control-node}, foi gerado o par de chaves com \cod|ssh-keygen|, que cria a chave
+        \textbf{privada} (\texttt{\textasciitilde/.ssh/id\_rsa}, que nunca sai da máquina) e a chave
+        \textbf{pública} (\texttt{\textasciitilde/.ssh/id\_rsa.pub}, que pode ser compartilhada).
+  \item O conteúdo da chave pública (\cod|cat ~/.ssh/id_rsa.pub|) foi colado no
+        \texttt{provision.sh} do \texttt{app01} e do \texttt{db01}
+        (Código~\ref{cod:provision-app01}), que a adiciona ao arquivo
+        \path{/home/vagrant/.ssh/authorized_keys}.
+  \item O provisionamento foi reaplicado nas duas máquinas com \cod|vagrant reload --provision|
+        (ou \cod|vagrant destroy -f| e \cod|vagrant up|).
+  \item A partir daí, o \texttt{control-node} passou a acessar os servidores sem senha, por
+        exemplo com \cod|ssh vagrant@app01|, e o \cod|ansible all -m ping| passou a responder
+        \texttt{SUCCESS} com \texttt{"ping": "pong"} para os dois \textit{hosts}.
+\end{enumerate}
+
+\codigo{bash}{02-ansible-lab/app01/provision.sh}{Provisionamento do app01 com a chave pública do control-node}{provision-app01}
+
+\begin{atencao}[Segurança]
+  A chave pública aparece no \texttt{provision.sh}, mas a chave privada (\texttt{id\_rsa}) nunca deve
+  ser exibida em prints nem versionada. No repositório, a chave pública real foi substituída pelo
+  marcador \texttt{COLE\_AQUI\_A\_CHAVE\_PUBLICA\_DO\_CONTROL\_NODE}.
+\end{atencao}
+
+\begin{terminal}[caption={Configuração e teste da comunicação SSH no control-node},label={cod:ssh-ansible}]
+vagrant ssh                      # entra no control-node (a partir da pasta control-node)
+ansible -m ping all              # 1º teste: falha (Permission denied)
+ssh-keygen                       # gera o par de chaves (Enter para aceitar os padrões)
+cat ~/.ssh/id_rsa.pub            # exibe a chave PÚBLICA para colar no provision.sh
+# ... no Windows, em app01/ e db01/: vagrant reload --provision ...
+ssh vagrant@app01                # acesso sem senha (digite exit para voltar)
+ansible all -m ping              # app01 | SUCCESS e db01 | SUCCESS ("pong")
+\end{terminal}
+
+\subsubsection{Inventário e arquivo de configuração}
+
+No início, o inventário foi configurado no arquivo padrão \texttt{/etc/ansible/hosts}, editado
+com o \texttt{vi} (\texttt{i} para inserir, \texttt{ESC} para sair do modo de inserção e
+\texttt{:wq} para salvar), com os grupos \texttt{[apps]} (contendo \texttt{app01}) e \texttt{[dbs]}
+(contendo \texttt{db01}). Com a evolução do laboratório, o projeto ganhou uma estrutura própria e o
+inventário passou a ficar dentro dele, em \texttt{inventory/hosts.ini}
+(Código~\ref{cod:inventario}). Os grupos permitem executar comandos e \textit{playbooks} em conjuntos
+de servidores (por exemplo, \cod|ansible db -m ping|).
+
+\codigo{ini}{02-ansible-lab/control-node/ansible/inventory/hosts.ini}{Inventário do laboratório}{inventario}
+
+O arquivo de configuração do Ansible (Código~\ref{cod:ansible-cfg}) indica onde estão o inventário
+e as \textit{roles} e desativa a verificação interativa da impressão digital (\textit{fingerprint})
+das chaves dos \textit{hosts} (\texttt{host\_key\_checking = False}), o que é aceitável em
+laboratório. Um problema encontrado foi que o Ansible \textbf{ignorava} esse arquivo quando ele
+estava na pasta compartilhada \texttt{/vagrant}, por considerá-la \textit{world writable} (gravável
+por qualquer usuário) -- uma proteção de segurança. A solução foi copiá-lo para a \textit{home} do
+usuário: \cod|cp /vagrant/ansible/.ansible.cfg /home/vagrant/.ansible.cfg|.
+
+% Conteúdo do arquivo codigos/02-ansible-lab/control-node/ansible/.ansible.cfg
+\begin{listagem}[language=ini,caption={[Arquivo de configuração do Ansible (.ansible.cfg)]{Arquivo de configuração do Ansible -- \nolinkurl{02-ansible-lab/control-node/ansible/.ansible.cfg}}},label={cod:ansible-cfg}]
+[defaults]
+inventory = /vagrant/ansible/inventory/hosts.ini
+roles_path = /vagrant/ansible/roles
+host_key_checking = False
+\end{listagem}
+
+\printtela{ansible-inventario}{Inventário do Ansible no control-node}%
+  {Terminal no control-node com \texttt{cat /vagrant/ansible/inventory/hosts.ini}
+   (ou \texttt{ansible-inventory -{}-graph}) mostrando os grupos \texttt{[db]} e \texttt{[app]}.}
+
+\printtela{ansible-ssh-keygen}{Geração do par de chaves SSH no control-node}%
+  {Saída do \texttt{ssh-keygen} e do \texttt{cat \textasciitilde/.ssh/id\_rsa.pub}.
+   NÃO mostrar o conteúdo da chave privada (\texttt{id\_rsa}).}
+
+\printtela{ansible-ping}{Teste de conectividade com \texttt{ansible all -m ping}}%
+  {Terminal com \texttt{ansible all -m ping} retornando \texttt{app01 | SUCCESS} e
+   \texttt{db01 | SUCCESS} com \texttt{"ping": "pong"}.}
+
+\subsubsection{Estrutura do projeto Ansible}
+
+Para manter a automação padronizada, modular e reutilizável, o projeto foi organizado na estrutura
+de diretórios da Figura~\ref{fig:estrutura-ansible}. Cada pasta tem uma responsabilidade:
+\texttt{inventory/} define \textbf{quais} máquinas são gerenciadas, \texttt{playbooks/} define
+\textbf{o que} será executado e onde, \texttt{vars/} define \textbf{com quais valores}, e
+\texttt{roles/} organiza \textbf{como} a configuração é feita, em módulos reutilizáveis
+\citep{muniz2026}.
+
+\begin{figure}[H]
+  \centering
+  \caption{Estrutura de diretórios do projeto Ansible no control-node}\label{fig:estrutura-ansible}
+  \begin{minipage}{0.78\linewidth}
+    \dirtree{%
+      .1 ansible/.
+      .2 {.}ansible{.}cfg \DTcomment{configuração (inventário e caminho das roles)}.
+      .2 inventory/.
+      .3 hosts{.}ini \DTcomment{servidores e grupos}.
+      .2 vars/.
+      .3 main{.}yml \DTcomment{variáveis globais do projeto}.
+      .2 playbooks/.
+      .3 db{.}yml \DTcomment{configura o db01}.
+      .3 app{.}yml \DTcomment{configura o app01 e a aplicação}.
+      .3 templates/ \DTcomment{arquivos Jinja2 usados pelo app{.}yml}.
+      .4 application{.}properties.
+      .4 etc/systemd/system/notes{.}service.
+      .2 roles/.
+      .3 configuracao-default-so/ \DTcomment{preparação do sistema}.
+      .4 tasks/main{.}yml.
+      .4 defaults/ files/ handlers/ templates/ vars/.
+      .3 configuracao-mariadb/ \DTcomment{banco de dados}.
+      .4 tasks/main{.}yml.
+      .4 vars/main{.}yml.
+      .4 defaults/ files/ handlers/ templates/.
+    }
+  \end{minipage}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{figure}
+
+Dentro de cada \textit{role}, os nomes das pastas são padronizados e precisam estar exatamente no
+plural (\texttt{tasks}, \texttt{handlers}\ldots), porque o Ansible os descobre automaticamente:
+ao chamar a \textit{role} no \textit{playbook}, ele executa o arquivo \texttt{tasks/main.yml}. A
+Tabela~\ref{tab:pastas-role} resume a função de cada pasta -- ou, na frase usada em aula,
+``\textit{tasks} faz, \textit{handlers} reage, \textit{vars} define e \textit{defaults} permite mudar''.
+
+\begin{table}[H]
+  \centering
+  \caption{Pastas de uma role do Ansible}\label{tab:pastas-role}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{>{\ttfamily}l >{\raggedright\arraybackslash}X}
+    \toprule
+    \normalfont\bfseries Pasta & \textbf{Função} \\
+    \midrule
+    tasks/ & Tarefas executadas pela \textit{role} (arquivo \texttt{main.yml}). \\
+    handlers/ & Tarefas disparadas somente quando outra tarefa altera algo (\texttt{notify}), como
+      reiniciar um serviço. \\
+    templates/ & Arquivos dinâmicos (Jinja2), com variáveis substituídas na execução. \\
+    files/ & Arquivos estáticos, copiados exatamente como estão (scripts, SQL\ldots). \\
+    vars/ & Variáveis específicas da \textit{role} (alta precedência). \\
+    defaults/ & Valores padrão (baixa precedência): ``se ninguém informar outro valor, use este''. \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+\subsubsection{Variáveis}
+
+As variáveis do projeto ficam em \texttt{vars/main.yml} (Código~\ref{cod:vars}) e são importadas
+pelos \textit{playbooks} com \texttt{vars\_files}. Elas evitam repetir valores nas tarefas: o nome do
+banco, o usuário e as senhas são definidos em um único lugar e usados com a sintaxe Jinja2
+\cod|"{{ mysql_db_name }}"|. A \textit{role} \path{configuracao-mariadb} também possui o seu
+\texttt{vars/main.yml} com os mesmos nomes; como as variáveis de \textit{role} têm precedência maior
+que as de \texttt{vars\_files}, os valores precisam ser iguais nos dois arquivos \citep{redhat2026}.
+
+\codigo{yaml}{02-ansible-lab/control-node/ansible/vars/main.yml}{Variáveis globais do projeto}{vars}
+
+\begin{nota}
+  Nas aulas, as senhas do laboratório foram gravadas diretamente nesses arquivos. No repositório elas
+  foram trocadas por marcadores. Em um ambiente real, o correto é proteger esse arquivo com o
+  \textbf{Ansible Vault} (\cod|ansible-vault encrypt vars/main.yml|) e executar os
+  \textit{playbooks} com \cod|--ask-vault-pass|.
+\end{nota}
+
+\subsubsection{Role configuracao-default-so}
+
+Essa \textit{role} prepara o sistema operacional e é compartilhada pelos dois servidores
+(Código~\ref{cod:role-so}): atualiza todos os pacotes, instala o Git, o Python com o PyMySQL (necessário
+para os módulos de banco de dados do Ansible), o cliente MariaDB e garante que o \texttt{firewalld}
+esteja instalado, habilitado e em execução.
+
+\codigolongo{yaml}{02-ansible-lab/control-node/ansible/roles/configuracao-default-so/tasks/main.yml}{Tarefas da role configuracao-default-so}{role-so}
+
+\subsubsection{Role configuracao-mariadb e Ansible Galaxy}
+
+Para o banco de dados, o primeiro caminho apresentado foi o \textbf{Ansible Galaxy}, repositório
+\textit{on-line} de \textit{roles} prontas compartilhadas pela comunidade. Foi instalada a
+\textit{role} \texttt{geerlingguy.mysql} e a coleção \texttt{community.mysql}, que fornece os
+módulos \texttt{mysql\_db} e \texttt{mysql\_user}:
+
+\begin{terminal}[caption={Comandos do Ansible Galaxy executados no control-node},label={cod:galaxy}]
+ansible-galaxy install geerlingguy.mysql                # baixa a role para ~/.ansible/roles/
+ansible-galaxy collection install community.mysql        # módulos mysql_db e mysql_user
+ansible-galaxy list                                      # lista as roles instaladas
+\end{terminal}
+
+Em seguida, a instalação do banco foi implementada em uma \textit{role} própria,
+\path{configuracao-mariadb} (Código~\ref{cod:role-mariadb}), o que ajudou a entender cada passo:
+instalar o MariaDB e o PyMySQL; habilitar e iniciar o serviço; definir a senha do \texttt{root}
+(na primeira execução o acesso é feito pelo \textit{socket} local, ainda sem senha); criar o arquivo
+\texttt{/root/.my.cnf} com as credenciais do \texttt{root} e permissão \texttt{0600}; aplicar boas
+práticas de segurança (remover usuários anônimos e o banco \texttt{test}); criar o banco
+\texttt{notes} e o usuário \texttt{notesapp} com acesso a partir de qualquer \textit{host}
+(\texttt{\%}); e liberar a porta 3306 no \textit{firewall}. O \texttt{ignore\_errors} e o arquivo
+\texttt{.my.cnf} foram adicionados para que o \textit{playbook} pudesse ser reexecutado sem falhar
+depois que o \texttt{root} já tinha senha -- um cuidado ligado à idempotência.
+
+\codigolongo{yaml}{02-ansible-lab/control-node/ansible/roles/configuracao-mariadb/tasks/main.yml}{Tarefas da role configuracao-mariadb}{role-mariadb}
+
+\subsubsection{Playbook db.yml: configuração do servidor de banco de dados}
+
+O \textit{playbook} \texttt{db.yml} (Código~\ref{cod:db-yml}) junta tudo para o \texttt{db01}.
+Linha a linha: o \texttt{-{}-{}-} abre o documento YAML; o \texttt{- name} inicia uma \textit{play} (o
+hífen indica um item de lista, pois um \textit{playbook} é uma lista de \textit{plays});
+\texttt{hosts: db01} define onde executar; \texttt{remote\_user: vagrant} é o usuário da conexão SSH;
+\texttt{become: true} executa as tarefas com privilégio de administrador (equivalente ao
+\texttt{sudo}); \texttt{vars\_files} importa as variáveis; e \texttt{roles} lista as \textit{roles}
+aplicadas, na ordem.
+
+\codigo{yaml}{02-ansible-lab/control-node/ansible/playbooks/db.yml}{Playbook db.yml}{db-yml}
+
+Antes da execução real, o \textit{playbook} foi validado com as opções da
+Tabela~\ref{tab:testes-playbook}, todas executadas no \texttt{control-node} a partir da pasta
+\texttt{/vagrant/ansible}. Como YAML é sensível à indentação (não aceita tabulação e exige
+espaços consistentes, normalmente dois por nível), o \cod|--syntax-check| foi muito útil para achar
+erros antes de tocar nos servidores.
+
+\begin{table}[H]
+  \centering
+  \caption{Comandos usados para testar e executar os playbooks}\label{tab:testes-playbook}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{>{\ttfamily\small}l >{\raggedright\arraybackslash}X}
+    \toprule
+    \normalfont\bfseries Comando & \textbf{Função} \\
+    \midrule
+    ansible-playbook playbooks/db.yml -{}-syntax-check & Valida a sintaxe do YAML/\textit{playbook}. \\
+    ansible-playbook playbooks/db.yml -{}-list-hosts & Mostra em quais \textit{hosts} o \textit{playbook} vai rodar. \\
+    ansible-playbook playbooks/db.yml -{}-list-tasks & Lista as tarefas e \textit{roles} que serão executadas. \\
+    ansible-playbook playbooks/db.yml -{}-check & Simula a execução sem aplicar mudanças (\textit{dry run}). \\
+    ansible-playbook playbooks/db.yml & Execução real. \\
+    ansible-playbook playbooks/db.yml -v & Execução com mais detalhes (\texttt{-vvv} para depuração). \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+Ao final de cada execução, o Ansible exibe o \textbf{PLAY RECAP}, um resumo por \textit{host}:
+\texttt{ok} (tarefas que já estavam no estado desejado), \texttt{changed} (tarefas que alteraram
+algo), \texttt{unreachable} (\textit{host} inacessível), \texttt{failed} (tarefas com erro),
+\texttt{skipped} (puladas) e \texttt{ignored} (erros ignorados com \texttt{ignore\_errors}).
+
+\printtela{ansible-db-playbook}{Execução do playbook db.yml no db01}%
+  {Terminal com \texttt{ansible-playbook playbooks/db.yml} mostrando as tarefas das duas
+   \textit{roles} e o PLAY RECAP do \texttt{db01} com \texttt{failed=0}.}
+
+\subsubsection{Idempotência}
+
+\textbf{Idempotência} é a capacidade de executar a mesma tarefa várias vezes e sempre obter o mesmo
+resultado final: se o servidor já está no estado desejado, nada é alterado \citep{muniz2026}. Na
+prática, isso ficou visível ao executar o \texttt{db.yml} duas vezes: na primeira execução várias
+tarefas apareceram como \texttt{changed} (o MariaDB foi instalado, o banco foi criado\ldots); na
+segunda, as mesmas tarefas apareceram como \texttt{ok}, com \texttt{changed=0} ou próximo de zero,
+porque o banco, o usuário e as regras de \textit{firewall} já existiam. Essa propriedade evita
+erros em reexecuções, garante a consistência do ambiente e é o que permite usar o Ansible com
+segurança dentro de \textit{pipelines} de CI/CD. Vale notar que nem todo módulo é idempotente por
+natureza: tarefas com \texttt{command} ou \texttt{shell} (como o \cod|mvn package| do
+\texttt{app.yml}) sempre aparecem como \texttt{changed}, a menos que se use \texttt{changed\_when}
+ou \texttt{creates} -- por isso a tarefa que apenas localiza o JAR recebeu
+\texttt{changed\_when: false}.
+
+\printtela{ansible-idempotencia}{Segunda execução do db.yml demonstrando a idempotência}%
+  {Terminal com a segunda execução do \texttt{ansible-playbook playbooks/db.yml}, mostrando as
+   tarefas em verde (\texttt{ok}) e o PLAY RECAP com \texttt{changed=0} (ou o menor valor obtido).}
+
+\subsubsection{Playbook app.yml: servidor de aplicação e deploy do Easy Notes}
+
+O segundo \textit{playbook} configura o \texttt{app01} e faz o \textit{deploy} da aplicação
+\textbf{Easy Notes}, uma API REST de notas desenvolvida em Java com Spring Boot, que grava os dados
+no MariaDB do \texttt{db01} \citep{singh2021}. O projeto (pasta \texttt{Easy-Notes-Java},
+disponibilizada no Blackboard) foi salvo dentro da pasta do \texttt{control-node}. O fluxo do
+\textit{playbook} é:
+
+\begin{tcolorbox}[enhanced, colback=corprimaria!4, colframe=corprimaria!40, boxrule=0.5pt,
+    arc=2pt, left=8pt, right=8pt, top=5pt, bottom=5pt, fontupper=\small\raggedright]
+  configurar o \texttt{/etc/hosts} $\rightarrow$ criar o usuário \texttt{app} $\rightarrow$
+  instalar o Java 21 $\rightarrow$ definir \texttt{java} e \texttt{javac} padrão $\rightarrow$
+  instalar o Maven $\rightarrow$ criar \texttt{/opt/notes} $\rightarrow$ copiar o projeto
+  $\rightarrow$ gerar o \texttt{application.properties} $\rightarrow$ compilar com o Maven
+  $\rightarrow$ localizar o JAR $\rightarrow$ criar o serviço \texttt{notes.service}
+  $\rightarrow$ liberar a porta 8080 $\rightarrow$ iniciar a aplicação.
+\end{tcolorbox}
+
+\codigolongo{yaml}{02-ansible-lab/control-node/ansible/playbooks/app.yml}{Playbook app.yml}{app-yml}
+
+Os principais pontos do \texttt{app.yml} são:
+
+\begin{itemize}
+  \item \textbf{\texttt{lineinfile} com \texttt{loop}}: garante que cada linha da lista exista no
+        \texttt{/etc/hosts}; o \cod|{{ item }}| representa o item atual do \texttt{loop}.
+  \item \textbf{\texttt{user}}: cria o usuário \texttt{app}, que executa a aplicação. Assim, a
+        aplicação não roda como \texttt{root}, o que é uma boa prática de segurança.
+  \item \textbf{\texttt{dnf}} e \textbf{\texttt{alternatives}}: instalam o Java 21 e o definem como
+        versão padrão de \texttt{java} e \texttt{javac} (\texttt{priority: 2100}). O caminho exato
+        do Java depende da versão instalada e pode ser conferido com \cod|ls /usr/lib/jvm/|.
+  \item \textbf{\texttt{file}} e \textbf{\texttt{copy}}: criam \texttt{/opt/notes} com dono
+        \texttt{app} e permissão \texttt{0755} e copiam o projeto do \textit{control-node} para o
+        \texttt{app01}.
+  \item \textbf{\texttt{template}}: gera o \texttt{application.properties} a partir do
+        \textit{template} Jinja2 (Código~\ref{cod:app-properties}), substituindo
+        \cod|{{ dbhost }}|, \cod|{{ dbname }}|, \cod|{{ dbusername }}| e \cod|{{ dbpassword }}|.
+  \item \textbf{\texttt{command}} com \texttt{become\_user: app} e \texttt{environment}: compila a
+        aplicação com \cod|mvn clean package| como usuário \texttt{app}, usando o Java 21
+        (\texttt{JAVA\_HOME}). Executar como \texttt{app} evita erros de permissão e o erro
+        \textit{detected dubious ownership} do Git.
+  \item \textbf{\texttt{shell}} com \texttt{register} e \textbf{\texttt{debug}}: localizam o arquivo
+        JAR gerado, guardam o caminho na variável \texttt{app\_jar} e o exibem na tela.
+  \item \textbf{\texttt{template}} com \texttt{notify}: cria o serviço \texttt{systemd}
+        (Código~\ref{cod:notes-service}) e, se o arquivo mudar, aciona os \textit{handlers}.
+  \item \textbf{\texttt{firewalld}} e \textbf{\texttt{service}}: liberam a porta 8080 e iniciam e
+        habilitam o serviço \texttt{notes} no \textit{boot}.
+  \item \textbf{\textit{Handlers}}: \texttt{reload daemon} (recarrega o \texttt{systemd} para ler o
+        novo arquivo de serviço) e \texttt{restart notes} (reinicia a aplicação). Eles só executam
+        quando notificados e no final da \textit{play}, evitando reinicializações desnecessárias.
+\end{itemize}
+
+\codigo{ini}{02-ansible-lab/control-node/ansible/playbooks/templates/application.properties}{Template Jinja2 do application.properties}{app-properties}
+
+O arquivo \texttt{notes.service} (Código~\ref{cod:notes-service}) transforma a aplicação Java em um
+serviço do Linux: a seção \texttt{[Unit]} descreve o serviço e indica que ele deve subir depois da
+rede (\texttt{After=network.target}); a seção \texttt{[Service]} define o usuário, o diretório de
+trabalho, o comando de inicialização -- em que \cod|{{ app_jar.stdout }}| é substituído pelo caminho
+do JAR encontrado (por exemplo, \texttt{/opt/notes/target/easy-notes-1.0.0.jar}) -- e
+\texttt{Restart=always}, que reinicia a aplicação se ela cair; e a seção \texttt{[Install]} permite
+iniciá-la automaticamente no \textit{boot}. Depois disso, a aplicação pode ser controlada com
+\cod|systemctl start|, \cod|stop|, \cod|restart| e \cod|status notes|.
+
+\codigo{ini}{02-ansible-lab/control-node/ansible/playbooks/templates/etc/systemd/system/notes.service}{Template do serviço systemd da aplicação}{notes-service}
+
+\subsubsection{Validação da aplicação}
+
+Com os dois \textit{playbooks} executados, a aplicação foi testada com o \texttt{curl}, que permite
+``conversar'' com a API pelo terminal: \texttt{-X} define o método HTTP, \texttt{-H} adiciona
+cabeçalhos (como \texttt{Content-Type: application/json}) e \texttt{-d} envia o corpo da requisição
+(Código~\ref{cod:testes-api}). Por fim, foi conferido no \texttt{db01} que a nota criada pela API
+estava gravada na tabela \texttt{notes}, o que comprova a integração entre os dois servidores.
+
+\begin{terminal}[caption={Testes da aplicação e do banco de dados},label={cod:testes-api}]
+ansible-playbook playbooks/app.yml          # no control-node, a partir de /vagrant/ansible
+ssh vagrant@app01                           # acessa o servidor de aplicação
+sudo systemctl status notes                 # serviço ativo (running)
+curl http://localhost:8080/api/notes        # lista as notas (JSON)
+curl -X POST http://localhost:8080/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Primeira nota", "content": "Aplicação configurada com Ansible"}'
+
+ssh vagrant@db01                            # no servidor de banco de dados
+mysql -u notesapp -p notes -e "SELECT id, title FROM notes;"
+\end{terminal}
+
+\printtela{ansible-app-playbook}{Execução do playbook app.yml no app01}%
+  {Terminal com \texttt{ansible-playbook playbooks/app.yml}: tarefas executadas, o \texttt{debug}
+   com o caminho do JAR, os \textit{handlers} (\texttt{RUNNING HANDLER}) e o PLAY RECAP com
+   \texttt{failed=0}.}
+
+\printtela{ansible-notes-status}{Serviço da aplicação ativo no app01}%
+  {Terminal no app01 com \texttt{sudo systemctl status notes} mostrando \texttt{active (running)}.}
+
+\printtela{ansible-api-curl}{Teste da API REST com curl}%
+  {Terminal com o \texttt{curl -X POST} criando uma nota e o \texttt{curl} GET em
+   \texttt{/api/notes} retornando o JSON com a nota criada.}
+
+\printtela{ansible-mariadb}{Nota gravada no banco de dados MariaDB do db01}%
+  {Terminal no db01 com \texttt{sudo systemctl status mariadb} e/ou o \texttt{SELECT} na tabela
+   \texttt{notes} mostrando a nota criada pela API.}
+
+\printtela{ansible-arquivos-yml}{Arquivos YAML do projeto Ansible no editor}%
+  {VS Code com a árvore do projeto \texttt{ansible/} aberta e um dos arquivos \texttt{.yml}
+   (por exemplo, \texttt{app.yml} ou \texttt{db.yml}) visível.}
+
+\subsubsection{Módulos utilizados}
+
+\begin{table}[H]
+  \centering
+  \caption{Módulos do Ansible utilizados no laboratório}\label{tab:modulos}
+  \small
+  \renewcommand{\arraystretch}{1.18}
+  \begin{tabularx}{\linewidth}{>{\ttfamily}l >{\raggedright\arraybackslash}X}
+    \toprule
+    \normalfont\bfseries Módulo & \textbf{Função no laboratório} \\
+    \midrule
+    dnf & Instala, atualiza ou remove pacotes no Rocky Linux (\texttt{present}, \texttt{latest}, \texttt{absent}). \\
+    service / systemd & Inicia, para, reinicia e habilita serviços (\texttt{started}, \texttt{restarted}, \texttt{enabled}). \\
+    lineinfile & Garante que uma linha exista em um arquivo (\texttt{/etc/hosts}). \\
+    user & Cria e configura usuários (usuário \texttt{app}). \\
+    file & Cria diretórios e ajusta dono, grupo e permissões. \\
+    copy & Copia arquivos e pastas do \textit{control-node} para o \textit{host}. \\
+    template & Copia arquivos processando variáveis Jinja2. \\
+    command / shell & Executa comandos (\texttt{shell} permite \textit{pipes}, como \texttt{|} e \texttt{grep}). \\
+    debug & Exibe valores de variáveis na saída do \textit{playbook}. \\
+    alternatives & Define a versão padrão de um programa (\texttt{java}, \texttt{javac}). \\
+    firewalld & Abre portas e serviços no \textit{firewall}. \\
+    mysql\_db / mysql\_user & Criam e removem bancos e usuários no MariaDB (coleção \texttt{community.mysql}). \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+\subsubsection{Diagnóstico de problemas}
+
+Quando algo não funcionava, foi seguida a sequência de verificação apresentada em aula, do mais
+básico ao mais específico \citep{muniz2026}: (1) a máquina responde? (\cod|ping app01|); (2) a porta
+está aberta? (\cod!sudo ss -tulpn | grep 8080! ou \cod|nc -zv app01 8080|); (3) o
+\textit{firewall} está liberado? (\cod|sudo firewall-cmd --list-all|); (4) o serviço está rodando?
+(\cod|systemctl status notes| e \cod|journalctl -u notes|); (5) a API responde localmente?
+(\cod|curl http://localhost:8080/api/notes|); (6) responde remotamente? (a partir do
+\textit{control-node}); e (7) o JSON enviado está correto? Essa abordagem em camadas evitou
+``chutes'' e ajudou a entender a relação entre rede, \textit{firewall}, serviço e aplicação.
+
+\subsubsection{Como o Ansible automatiza configurações que antes eram manuais}
+
+Sem o Ansible, preparar o ambiente exigiria entrar em cada servidor por SSH e repetir dezenas de
+comandos: atualizar o sistema, instalar pacotes, configurar o MariaDB, criar banco e usuário, abrir
+portas, instalar Java e Maven, copiar e compilar a aplicação, escrever o arquivo de serviço e
+iniciá-lo. Cada um desses passos é uma oportunidade de erro e, se um servidor precisasse ser
+recriado, tudo teria de ser refeito. Com o Ansible, essas etapas viraram código: dois
+\textit{playbooks} e duas \textit{roles} versionados que configuram os servidores com um único
+comando, sempre da mesma forma, e que podem ser reexecutados com segurança graças à idempotência.
+Além disso, a \textit{role} \path{configuracao-default-so} foi reaproveitada nos dois servidores,
+mostrando na prática o ganho de padronização e reutilização que a Infraestrutura como Código
+proporciona.

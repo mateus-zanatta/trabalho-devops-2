@@ -1,0 +1,12 @@
+[Unit]
+Description=Easy Notes
+After=network.target
+
+[Service]
+User=app
+WorkingDirectory=/opt/notes
+ExecStart=/usr/bin/java -jar {{ app_jar.stdout }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

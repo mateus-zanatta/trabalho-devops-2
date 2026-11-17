@@ -1,0 +1,18 @@
+# control-node: máquina de controle do Ansible (o "cérebro" do laboratório)
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rocky9"
+  config.vm.hostname = "control-node"
+
+  # Rede privada entre as VMs do laboratório (192.168.1.0/24)
+  config.vm.network "private_network", ip: "192.168.1.2"
+
+  # A pasta do projeto (com o diretório ansible/) fica disponível em /vagrant
+  config.vm.synced_folder ".", "/vagrant"
+
+  config.vm.provision "shell", path: "provision.sh"
+
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"]  = "1024"
+    v.vmx["numvcpus"] = "2"
+  end
+end

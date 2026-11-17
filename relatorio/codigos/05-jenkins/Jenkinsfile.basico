@@ -1,0 +1,24 @@
+// Pipeline declarativo básico: três estágios executados em sequência
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Executando build da aplicação'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Executando testes'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Executando deploy'
+            }
+        }
+    }
+}

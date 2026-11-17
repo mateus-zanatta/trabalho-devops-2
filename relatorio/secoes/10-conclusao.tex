@@ -1,0 +1,31 @@
+% =====================================================================
+%  3 Conclusão
+% =====================================================================
+\section{Conclusão}\label{sec:conclusao}
+
+As atividades práticas da disciplina de Fundamentos de DevOps permitiram construir, de forma
+incremental, um laboratório que reproduz em pequena escala o ambiente de uma empresa. O Vagrant,
+junto com o VMware, tornou possível criar e recriar sete máquinas virtuais a partir de arquivos de
+texto; o Git e o GitHub garantiram o versionamento de todo o trabalho; o Ansible automatizou a
+configuração dos servidores de banco de dados e de aplicação e o \textit{deploy} da aplicação Easy
+Notes; o Docker empacotou essa aplicação em uma imagem portátil; o SonarQube avaliou a qualidade e a
+segurança do código; e o Jenkins encadeou essas etapas em um \textit{pipeline} de CI/CD.
+
+Mais do que aprender comandos, as práticas mostraram os princípios por trás do DevOps:
+\textbf{automação} no lugar de tarefas manuais repetitivas, \textbf{Infraestrutura como Código} e
+\textbf{versionamento} para ter ambientes reprodutíveis e rastreáveis, \textbf{idempotência} para
+executar a automação com segurança quantas vezes for preciso, \textbf{qualidade contínua} com a
+análise estática e o Quality Gate, e \textbf{\textit{feedback} rápido} por meio do \textit{pipeline}.
+Os problemas enfrentados no caminho -- autenticação SSH entre as VMs, indentação do YAML,
+permissões de diretórios, versões do Java, portas e \textit{firewall} -- também fizeram parte do
+aprendizado, pois exigiram diagnosticar o ambiente camada por camada, como acontece no dia a dia de
+operações.
+
+Outro aprendizado importante foi o cuidado com informações sensíveis: senhas, chaves privadas e
+\textit{tokens} não devem aparecer no código versionado nem nos prints, e ferramentas como o Ansible
+Vault e as \textit{credentials} do Jenkins existem justamente para isso. Como evolução do laboratório,
+seria interessante proteger as variáveis com o Ansible Vault, fazer o Jenkins acionar os
+\textit{playbooks} do Ansible, publicar as imagens em um \textit{registry}, adicionar monitoramento
+(por exemplo, com Prometheus e Grafana) e levar a mesma estrutura para um ambiente de nuvem. Conclui-se
+que as ferramentas estudadas, quando integradas, transformam a entrega de software em um processo
+padronizado, rápido e confiável, que é exatamente o que a cultura DevOps propõe.

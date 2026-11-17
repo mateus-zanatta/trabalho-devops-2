@@ -1,0 +1,12 @@
+---
+- name: Configurar servidores de banco de dados
+  hosts: db01
+  remote_user: vagrant
+  become: true
+
+  vars_files:
+    - ../vars/main.yml
+
+  roles:
+    - configuracao-default-so
+    - configuracao-mariadb

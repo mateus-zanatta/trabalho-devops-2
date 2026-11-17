@@ -1,0 +1,16 @@
+# jenkins: servidor de integração e entrega contínua (CI/CD)
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rocky9"
+  config.vm.hostname = "jenkins"
+
+  config.vm.network "private_network", ip: "192.168.1.7"
+  # Interface web do Jenkins: 8081 no host para não colidir com o 8080 do app01
+  config.vm.network "forwarded_port", guest: 8080, host: 8081, host_ip: "127.0.0.1"
+
+  config.vm.provision "shell", path: "provision.sh"
+
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"]  = "4096"
+    v.vmx["numvcpus"] = "2"
+  end
+end

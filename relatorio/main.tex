@@ -1,0 +1,54 @@
+% =====================================================================
+%  Relatório das Atividades Práticas de Fundamentos de DevOps
+%  Projeto LaTeX para o Overleaf (compilador: pdfLaTeX)
+% =====================================================================
+\documentclass[12pt,a4paper,oneside]{article}
+
+\input{config/preambulo}
+\input{config/comandos}
+
+% ---------- Dados do trabalho (confira e ajuste) ----------
+\newcommand{\autor}{Mateus Zanatta Mariani}
+\newcommand{\instituicao}{Centro Universitário Senac RS -- UNISENAC Pelotas}
+\newcommand{\curso}{Curso Superior de Tecnologia em Análise e Desenvolvimento de Sistemas}
+\newcommand{\disciplina}{Fundamentos de DevOps}
+\newcommand{\professor}{Prof. Augusto da Rosa Muniz}
+\newcommand{\titulo}{Relatório das Atividades Práticas de Fundamentos de DevOps}
+\newcommand{\subtitulo}{Vagrant, Git e GitHub, Ansible, Docker, SonarQube e Jenkins}
+\newcommand{\local}{Pelotas}
+\newcommand{\ano}{2026}
+\newcommand{\repositorio}{https://github.com/mateus-zanatta/trabalho-devops-2}
+
+\hypersetup{pdftitle={\titulo}, pdfauthor={\autor}, pdfsubject={\disciplina}}
+
+\begin{document}
+
+% ---------------------------------------------------------------------
+%  Elementos pré-textuais
+% ---------------------------------------------------------------------
+\input{secoes/00-capa}
+
+\onehalfspacing
+
+% ---------------------------------------------------------------------
+%  Elementos textuais
+% ---------------------------------------------------------------------
+\pagestyle{fancy}
+\input{secoes/01-introducao}
+\input{secoes/02-desenvolvimento}
+\input{secoes/03-vagrant}
+\input{secoes/04-git}
+\input{secoes/05-ansible}
+\input{secoes/06-docker}
+\input{secoes/07-sonarqube}
+\input{secoes/08-jenkins}
+\input{secoes/09-integracao}
+\input{secoes/10-conclusao}
+\input{secoes/11-reflexao}
+
+% ---------------------------------------------------------------------
+%  Elementos pós-textuais
+% ---------------------------------------------------------------------
+\input{secoes/12-referencias}
+
+\end{document}

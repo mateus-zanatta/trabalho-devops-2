@@ -1,0 +1,90 @@
+% =====================================================================
+%  1 Introdução
+% =====================================================================
+\section{Introdução}
+
+Durante muito tempo, a entrega de software foi organizada em equipes separadas: os desenvolvedores
+escreviam o código e as equipes de operações (infraestrutura) eram responsáveis por instalá-lo e
+mantê-lo funcionando em servidores físicos, sujeitos a falhas. Com o modelo em cascata
+(\textit{waterfall}), as entregas eram lentas, cada \textit{deploy} se tornava um ``super evento''
+que envolvia vários times isolados em silos, e boa parte da configuração de servidores ainda era
+feita de forma manual \citep{muniz2026}. O resultado era pouca inovação, retrabalho e a famosa
+frase ``funciona na minha máquina''.
+
+O \textbf{DevOps} surgiu como resposta a esse cenário. Ele pode ser definido como um conjunto de
+práticas que combina o desenvolvimento de software (\textit{Dev}) e as operações de TI (\textit{Ops})
+com o objetivo de reduzir o ciclo de desenvolvimento, oferecendo entrega contínua de software de
+alta qualidade \citep{muniz2026,kim2018}. É importante destacar que DevOps não é uma ferramenta,
+e sim uma cultura e uma metodologia de trabalho: desenvolvedores e operações passam a trabalhar
+juntos durante todo o ciclo de vida do software, e o time de operações adota técnicas típicas do
+desenvolvimento, como versionamento, testes e automação. A Figura~\ref{fig:ciclo-devops} resume as
+etapas desse ciclo, que se repete continuamente.
+
+\begin{figure}[H]
+  \centering
+  \caption{Etapas do ciclo DevOps}\label{fig:ciclo-devops}
+  \begin{tikzpicture}
+    \foreach \nome/\cor [count=\i from 0] in {Definição/corprimaria, Planejar/corprimaria,
+        Codificar/corprimaria, Build/corprimaria, Testar/corprimaria, Liberar/cordestaque,
+        Deploy/cordestaque, Operar/cordestaque, Monitorar/cordestaque} {
+      \node[draw=\cor, fill=\cor!10, rounded corners=3pt, minimum width=2.15cm,
+            minimum height=0.72cm, font=\footnotesize\bfseries, text=\cor!85!black]
+            (n\i) at ({4.7*cos(90-\i*40)}, {2.85*sin(90-\i*40)}) {\nome};
+    }
+    \foreach \i [evaluate=\i as \j using {int(mod(\i+1,9))}] in {0,...,8} {
+      \draw[seta] (n\i) to[bend left=10] (n\j);
+    }
+    \node[font=\normalsize\bfseries, text=corprimaria] at (0,0.3) {DevOps};
+    \node[align=center, font=\scriptsize, text=corcinza] at (0,-0.35)
+         {ciclo contínuo de\\entrega e \textit{feedback}};
+    \node[anchor=north, font=\scriptsize, text=corcinza] at (0,-3.55)
+         {\textcolor{corprimaria}{\rule{1.4ex}{1.4ex}} etapas mais ligadas ao desenvolvimento (\textit{Dev})
+          \qquad \textcolor{cordestaque}{\rule{1.4ex}{1.4ex}} etapas mais ligadas às operações (\textit{Ops})};
+  \end{tikzpicture}
+  \fonte{Adaptado de Muniz (2026), Aula 1.}
+\end{figure}
+
+A integração entre desenvolvimento e operações é importante porque elimina a ``passagem de bastão''
+entre equipes. Quando as duas áreas compartilham responsabilidades, ferramentas e objetivos, os
+problemas são descobertos mais cedo, as entregas ficam menores e mais frequentes, e o
+\textit{feedback} sobre cada mudança chega rapidamente a quem a fez. Entre os benefícios
+apresentados na disciplina estão o aumento da velocidade de entrega, a criação de uma cultura de
+agilidade e automação, a aceleração dos \textit{releases}, o apoio à área de negócio
+(\textit{time to market}), o aumento da segurança e da estabilidade e uma colaboração muito maior
+entre as pessoas \citep{muniz2026}. Ainda assim, DevOps não é ``bala de prata'': ambientes pequenos,
+muito controlados ou com poucas mudanças podem funcionar bem com modelos mais tradicionais.
+
+Para que essa cultura funcione na prática, algumas práticas técnicas são fundamentais:
+
+\begin{itemize}
+  \item \textbf{Automação}: tarefas repetitivas (instalar pacotes, configurar serviços, compilar,
+        testar, publicar) passam a ser executadas por scripts e ferramentas, o que reduz o erro
+        humano e garante que o processo seja sempre igual.
+  \item \textbf{Versionamento}: todo artefato do projeto -- código, scripts e configurações -- fica
+        em um sistema de controle de versão como o Git, com histórico, rastreabilidade e a
+        possibilidade de voltar a uma versão anterior.
+  \item \textbf{Infraestrutura como Código (IaC)}: servidores e ambientes são descritos em arquivos
+        de texto (como \texttt{Vagrantfile} e \textit{playbooks} do Ansible), que podem ser
+        versionados, revisados e executados quantas vezes for necessário, sempre gerando o mesmo
+        resultado.
+  \item \textbf{Containers}: a aplicação é empacotada junto com todas as suas dependências,
+        tornando-se portátil e isolada, o que elimina conflitos de versões entre ambientes.
+  \item \textbf{Análise de código}: ferramentas de análise estática, como o SonarQube, apontam
+        \textit{bugs}, vulnerabilidades e problemas de manutenção antes que o código chegue à produção.
+  \item \textbf{Pipelines}: ferramentas como o Jenkins encadeiam automaticamente as etapas de
+        \textit{build}, teste, análise e \textit{deploy} a cada alteração, implementando a
+        integração e a entrega contínuas (CI/CD).
+\end{itemize}
+
+O objetivo das práticas realizadas na disciplina foi construir, passo a passo, um laboratório que
+simula um ambiente corporativo real: máquinas virtuais criadas com o Vagrant, código e configurações
+versionados com Git e GitHub, servidores de aplicação e de banco de dados configurados pelo Ansible,
+a aplicação Java \textit{Easy Notes} empacotada em container com Docker, a qualidade do código
+verificada pelo SonarQube e todo o fluxo automatizado em um \textit{pipeline} no Jenkins. Mais do que
+aprender cada ferramenta isoladamente, a proposta foi entender como elas se conectam dentro do
+ciclo DevOps.
+
+Este relatório está organizado da seguinte forma: a Seção~\ref{sec:desenvolvimento} descreve o
+ambiente do laboratório e cada atividade prática (Vagrant, Git e GitHub, Ansible, Docker, SonarQube
+e Jenkins), além da integração entre as ferramentas; a Seção~\ref{sec:conclusao} apresenta a
+conclusão; e a Seção~\ref{sec:reflexao} traz a resposta à pergunta reflexiva final.

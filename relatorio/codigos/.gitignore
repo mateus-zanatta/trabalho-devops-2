@@ -1,0 +1,5 @@
+# Arquivos que NÃO devem ir para o GitHub
+.vagrant/
+*.log
+.env
+.DS_Store

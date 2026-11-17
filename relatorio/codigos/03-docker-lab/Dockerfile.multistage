@@ -1,0 +1,16 @@
+# Estágio 1 (build): imagem com Maven + JDK para compilar o projeto
+FROM maven:3.8.8-eclipse-temurin-11 AS buildstage
+WORKDIR /opt/note
+RUN git clone https://github.com/callicoder/spring-boot-mysql-rest-api-tutorial.git .
+RUN mvn package -Dmaven.test.skip=true
+
+# Estágio 2 (runtime): somente o JRE e o JAR final, imagem bem menor
+FROM eclipse-temurin:11-jre-alpine
+RUN addgroup -S notes && adduser -S notes -G notes
+WORKDIR /opt/note
+COPY --from=buildstage /opt/note/target/easy-notes-1.0.0.jar easy-note.jar
+COPY application.properties application.properties
+RUN chown -R notes:notes /opt/note
+USER notes
+EXPOSE 8080
+ENTRYPOINT [ "java", "-jar", "/opt/note/easy-note.jar" ]

@@ -1,0 +1,84 @@
+% =====================================================================
+%  2.7 Integração entre as ferramentas
+% =====================================================================
+\subsection{Integração entre as ferramentas}\label{sec:integracao}
+
+Ao longo da disciplina, cada ferramenta foi estudada separadamente, mas o objetivo final era
+entender como elas se combinam para formar uma esteira DevOps. A Figura~\ref{fig:integracao} mostra
+essa visão de conjunto no laboratório, e a Tabela~\ref{tab:fases-ferramentas} relaciona as etapas do
+ciclo DevOps com as ferramentas utilizadas.
+
+\begin{figure}[H]
+  \centering
+  \caption{Integração entre as ferramentas no laboratório}\label{fig:integracao}
+  \begin{tikzpicture}
+    \tikzset{bloco/.style={caixa, text width=2.4cm, minimum height=1.2cm}}
+    % Linha de cima: fluxo de CI/CD
+    \node[caixacinza, text width=2.5cm, minimum height=1.2cm] (dev) at (0,0) {\textbf{Desenvolvedor}\\{\scriptsize edita e faz \textit{commit}}};
+    \node[caixalaranja, text width=2.4cm, minimum height=1.2cm] (git) at (4.1,0) {\textbf{Git / GitHub}\\{\scriptsize versiona código e IaC}};
+    \node[caixaescura, text width=2.4cm, minimum height=1.2cm] (jen) at (8.4,0) {Jenkins\\{\normalfont\scriptsize orquestra o \textit{pipeline}}};
+    \node[bloco] (son) at (12.8,1.05) {\textbf{SonarQube}\\{\scriptsize qualidade e \textit{quality gate}}};
+    \node[bloco] (doc) at (12.8,-1.05) {\textbf{Docker}\\{\scriptsize imagem e container}};
+    % Linha de baixo: infraestrutura configurada
+    \node[bloco] (ans) at (4.1,-3.1) {\textbf{Ansible}\\{\scriptsize \textit{control-node}}};
+    \node[bloco] (app) at (8.4,-3.1) {\textbf{app01}\\{\scriptsize Java + Easy Notes}};
+    \node[bloco] (db)  at (12.8,-3.1) {\textbf{db01}\\{\scriptsize MariaDB}};
+    % Setas
+    \draw[seta] (dev) -- node[rotulo, above=1pt]{\texttt{git push}} (git);
+    \draw[seta] (git) -- node[rotulo, above=1pt]{\textit{poll}} node[rotulo, below=1pt]{checkout} (jen);
+    \draw[seta] (jen.east) -- node[rotulo, above, sloped]{análise} (son.west);
+    \draw[seta] (jen.east) -- node[rotulo, below, sloped]{\textit{build}/\textit{deploy}} (doc.west);
+    \draw[seta, dashed] (git.south) -- node[rotulo, right=2pt]{\textit{playbooks}} (ans.north);
+    \draw[seta] (ans) -- node[rotulo, above=1pt]{SSH} (app);
+    \draw[seta] (ans.south) to[bend right=16] node[rotulo, above=1pt]{SSH} (db.south);
+    \draw[seta, color=corverde] (app) -- node[rotulo, above=1pt]{JDBC 3306} (db);
+    \draw[seta, dashed, color=corverde] (jen.south) to[out=-90, in=150]
+         node[rotulo, pos=0.45, below left=0pt]{testes (JDBC)} (db.north west);
+    \draw[seta, dashed, color=corverde] (doc.south) -- node[rotulo, right=2pt]{JDBC 3306} (db.north);
+    % Base: Vagrant
+    \coordinate (bl) at ($(dev.west |- ans.south)+(0,-1.65)$);
+    \coordinate (br) at ($(db.east |- ans.south)+(0,-1.05)$);
+    \draw[draw=corprimaria, fill=corprimaria!10, rounded corners=3pt] (bl) rectangle (br);
+    \node[font=\scriptsize\bfseries, text=corprimaria] at ($(bl)!0.5!(br)$)
+         {Vagrant + VMware: todas as VMs definidas em \texttt{Vagrantfile} (Infraestrutura como Código)};
+  \end{tikzpicture}
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Etapas do ciclo DevOps e ferramentas utilizadas no laboratório}\label{tab:fases-ferramentas}
+  \small
+  \renewcommand{\arraystretch}{1.22}
+  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.3cm} l >{\raggedright\arraybackslash}X}
+    \toprule
+    \textbf{Etapa} & \textbf{Ferramenta} & \textbf{Como foi usada} \\
+    \midrule
+    Codificar e versionar & Git e GitHub & Versionamento do código, dos \texttt{Vagrantfile}, dos \textit{playbooks}, do \texttt{Dockerfile} e do \texttt{Jenkinsfile}. \\
+    Provisionar a infraestrutura & Vagrant + VMware & Criação reprodutível de todas as VMs a partir de arquivos de texto. \\
+    Configurar servidores & Ansible & Preparação do sistema, MariaDB no \texttt{db01}, Java/Maven e \textit{deploy} da aplicação no \texttt{app01}. \\
+    \textit{Build} e testes & Maven (no Jenkins) & Compilação, empacotamento e testes a cada alteração. \\
+    Qualidade e segurança & SonarQube & Análise estática e Quality Gate antes do empacotamento. \\
+    Empacotar (\textit{release}) & Docker & Imagem da aplicação com todas as dependências. \\
+    \textit{Deploy} & Jenkins + Docker & Substituição automática do container e teste de fumaça. \\
+    Operar e monitorar & \texttt{systemd}, logs, \texttt{curl} & \texttt{systemctl status}, \texttt{journalctl}, \texttt{docker logs} e testes da API. \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{table}
+
+Na prática, o caminho de uma alteração no laboratório fica assim: o desenvolvedor altera o código e
+faz \cod|git push|; o Jenkins detecta o novo \textit{commit}, clona o repositório, compila e testa a
+aplicação -- inclusive contra o banco do \texttt{db01}, que foi configurado pelo Ansible em uma VM
+criada pelo Vagrant --; em seguida, o SonarQube analisa o código e o Quality Gate decide se ele pode
+seguir. Se for aprovado, o Docker empacota a aplicação em uma imagem e o Jenkins a coloca no ar e
+verifica se a API responde. Se algo falhar em qualquer etapa, o \textit{pipeline} para, o problema
+fica registrado no log e quem fez a alteração recebe o \textit{feedback} rapidamente.
+
+O ponto mais importante dessa integração é que \textbf{tudo é código}. As máquinas estão descritas
+nos \texttt{Vagrantfile}, a configuração dos servidores nos \textit{playbooks}, a imagem da aplicação
+no \texttt{Dockerfile} e o próprio processo de entrega no \texttt{Jenkinsfile} -- e tudo isso está
+versionado no Git.
+Isso torna o ambiente reprodutível, auditável e fácil de evoluir -- um próximo passo natural seria,
+por exemplo, o Jenkins executar os \textit{playbooks} do Ansible para atualizar os servidores, ou
+publicar a imagem em um \textit{registry} para ser executada em um orquestrador como o Kubernetes.

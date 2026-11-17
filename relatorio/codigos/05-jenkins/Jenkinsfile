@@ -1,0 +1,116 @@
+// Pipeline de CI/CD da aplicação Easy Notes
+// Git -> Build (Maven) -> Testes -> SonarQube (Quality Gate) -> Imagem Docker -> Deploy -> Teste de fumaça
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL       = 'https://github.com/callicoder/spring-boot-mysql-rest-api-tutorial.git'
+        JAVA_HOME      = '/usr/lib/jvm/java-17-openjdk'
+        SONAR_HOST_URL = 'http://sonarqube:9000'
+        DB_URL         = 'jdbc:mysql://db01:3306/notes?useSSL=false&serverTimezone=UTC'
+        IMAGEM         = 'devops/notes'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    triggers {
+        // Verifica o repositório a cada ~5 minutos e dispara o pipeline se houver commit novo
+        pollSCM('H/5 * * * *')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: "${REPO_URL}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn -B clean package -DskipTests'
+            }
+        }
+
+        stage('Testes') {
+            steps {
+                // O teste de integração usa o MariaDB do db01, configurado pelo Ansible
+                withCredentials([usernamePassword(credentialsId: 'db-notes',
+                        usernameVariable: 'SPRING_DATASOURCE_USERNAME',
+                        passwordVariable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                    sh 'SPRING_DATASOURCE_URL="$DB_URL" mvn -B test'
+                }
+            }
+        }
+
+        stage('Análise SonarQube') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    // qualitygate.wait=true: o estágio falha se o Quality Gate reprovar o código
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=easy-notes \
+                          -Dsonar.projectName="Easy Notes" \
+                          -Dsonar.sources=src/main/java \
+                          -Dsonar.tests=src/test/java \
+                          -Dsonar.java.binaries=target/classes \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.token=$SONAR_TOKEN \
+                          -Dsonar.qualitygate.wait=true
+                    '''
+                }
+            }
+        }
+
+        stage('Imagem Docker') {
+            steps {
+                writeFile file: 'Dockerfile', text: '''FROM eclipse-temurin:17-jre-alpine
+RUN addgroup -S notes && adduser -S notes -G notes
+USER notes:notes
+COPY target/easy-notes-1.0.0.jar /app/easy-notes.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/easy-notes.jar"]
+'''
+                sh 'docker build -t $IMAGEM:$BUILD_NUMBER -t $IMAGEM:latest .'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'db-notes',
+                        usernameVariable: 'DB_USER', passwordVariable: 'DB_PASS')]) {
+                    sh '''
+                        docker rm -f notes || true
+                        docker run -d --name notes -p 8090:8080 \
+                          --add-host db01:192.168.1.4 \
+                          -e SPRING_DATASOURCE_URL="$DB_URL" \
+                          -e SPRING_DATASOURCE_USERNAME="$DB_USER" \
+                          -e SPRING_DATASOURCE_PASSWORD="$DB_PASS" \
+                          $IMAGEM:$BUILD_NUMBER
+                    '''
+                }
+            }
+        }
+
+        stage('Teste de fumaça') {
+            steps {
+                // Aguarda a aplicação subir e confirma que a API responde
+                retry(5) {
+                    sleep(time: 10, unit: 'SECONDS')
+                    sh 'curl -fsS http://localhost:8090/api/notes'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deploy concluído: imagem ${IMAGEM}:${BUILD_NUMBER} rodando no container notes (porta 8090)."
+        }
+        failure {
+            echo 'Pipeline interrompido: verifique o log do estágio que falhou.'
+        }
+    }
+}

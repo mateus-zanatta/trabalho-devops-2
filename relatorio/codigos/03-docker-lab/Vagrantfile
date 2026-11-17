@@ -1,0 +1,16 @@
+# docker-notes: VM com Docker para executar a aplicação Easy Notes em container
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rocky9"
+  config.vm.hostname = "docker-notes"
+
+  config.vm.network "private_network", ip: "192.168.1.5"
+  # 8082 no host para não colidir com o 8080 já usado pelo app01
+  config.vm.network "forwarded_port", guest: 8080, host: 8082, host_ip: "127.0.0.1"
+
+  config.vm.provision "shell", path: "provision.sh"
+
+  config.vm.provider "vmware_desktop" do |v|
+    v.vmx["memsize"]  = "2048"
+    v.vmx["numvcpus"] = "2"
+  end
+end

@@ -1,0 +1,7 @@
+Coloque nesta pasta os prints do laboratório, com os nomes exatos listados em ../LEIA-ME.md
+(por exemplo: vagrant-up.png, ansible-ping.png, sonar-dashboard.png).
+
+Formatos aceitos: .png, .jpg ou .jpeg.
+Ao recompilar, cada caixa "INSERIR PRINT AQUI" do PDF é trocada automaticamente pela imagem.
+
+Antes de salvar: borre senhas e tokens e nunca mostre a chave privada SSH (id_rsa).

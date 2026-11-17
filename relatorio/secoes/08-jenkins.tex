@@ -1,0 +1,219 @@
+% =====================================================================
+%  2.6 Atividade com Jenkins
+% =====================================================================
+\subsection{Atividade com Jenkins}\label{sec:jenkins}
+
+\subsubsection{O que é o Jenkins}
+
+O \textbf{Jenkins} é um servidor de automação \textit{open source}, escrito em Java, usado para
+construir \textit{pipelines} de integração e entrega contínuas. Ele executa \textit{jobs} -- conjuntos
+de passos como clonar um repositório, compilar, testar e publicar -- de forma manual, agendada ou
+disparada por eventos, como um novo \textit{commit}. Por meio de milhares de \textit{plugins}, integra-se
+a praticamente todas as ferramentas do ecossistema DevOps (Git, Maven, Docker, SonarQube, Kubernetes),
+e permite descrever o \textit{pipeline} como código, em um arquivo chamado \texttt{Jenkinsfile}
+\citep{jenkins2026}.
+
+\subsubsection{CI/CD: integração contínua, entrega contínua e deploy contínuo}
+
+\textbf{CI/CD} é o conjunto de práticas que automatiza o caminho do código desde o \textit{commit}
+até a produção \citep{humble2014}. As três práticas são complementares e diferem principalmente em
+até onde a automação vai (Tabela~\ref{tab:cicd}):
+
+\begin{itemize}
+  \item \textbf{Integração Contínua} (\textit{Continuous Integration}): os desenvolvedores integram o
+        código ao repositório principal com frequência, e cada integração dispara automaticamente o
+        \textit{build} e os testes. Assim, erros de integração são descobertos em minutos, e não
+        semanas depois.
+  \item \textbf{Entrega Contínua} (\textit{Continuous Delivery}): estende a CI. Toda versão que passa
+        pelo \textit{pipeline} fica \textbf{pronta} para ser liberada, mas a ida para produção
+        depende de uma \textbf{aprovação manual} (um clique, uma decisão de negócio).
+  \item \textbf{Deploy Contínuo} (\textit{Continuous Deployment}): vai um passo além: toda alteração
+        aprovada em todas as etapas é implantada \textbf{automaticamente} em produção, sem
+        intervenção humana.
+\end{itemize}
+
+\begin{table}[H]
+  \centering
+  \caption{Diferenças entre integração contínua, entrega contínua e deploy contínuo}\label{tab:cicd}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \toprule
+    \textbf{Prática} & \textbf{O que é automatizado} & \textbf{Ida para produção} \\
+    \midrule
+    Integração contínua & \textit{Build} e testes a cada \textit{commit} & Não se aplica \\
+    Entrega contínua & \textit{Build}, testes, análise e empacotamento; artefato sempre pronto & Manual (aprovação) \\
+    \textit{Deploy} contínuo & Todo o caminho, inclusive o \textit{deploy} & Automática \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Humble e Farley (2014).}
+\end{table}
+
+\subsubsection{Como o Jenkins foi instalado e acessado}
+
+Seguindo o mesmo padrão das demais ferramentas, o Jenkins foi instalado em uma VM própria
+(\texttt{jenkins}, \texttt{192.168.1.7}, 4 GB de memória), com a interface web redirecionada para a
+porta 8081 do Windows -- a 8080 já era usada pelo \texttt{app01}. O script de provisionamento
+(Código~\ref{cod:provision-jenkins}) instala o Java 21, exigido pelas versões atuais do Jenkins, o
+Java 17 e o Maven para compilar a aplicação, o Jenkins LTS a partir do repositório oficial, o Docker
+(com o usuário \texttt{jenkins} no grupo \texttt{docker}, para que o \textit{pipeline} possa gerar
+imagens) e o SonarScanner. Também adiciona ao \texttt{/etc/hosts} os nomes \texttt{app01},
+\texttt{db01} e \texttt{sonarqube}, para que o Jenkins alcance as outras VMs pelo nome.
+
+\codigolongo{bash}{05-jenkins/provision.sh}{Provisionamento da VM do Jenkins}{provision-jenkins}
+
+Depois do \cod|vagrant up|, o Jenkins foi acessado em \url{http://localhost:8081} e configurado pelo
+assistente inicial:
+
+\begin{enumerate}
+  \item desbloqueio (\textit{Unlock Jenkins}) com a senha inicial, lida na VM com
+        \cod|sudo cat /var/lib/jenkins/secrets/initialAdminPassword|;
+  \item instalação dos \textit{plugins} sugeridos (\textit{Install suggested plugins}), que incluem
+        Pipeline, Git e Credentials Binding;
+  \item criação do primeiro usuário administrador e confirmação da URL do Jenkins.
+\end{enumerate}
+
+Para não escrever segredos nos \textit{pipelines}, as credenciais foram cadastradas em
+\textit{Manage Jenkins} $\rightarrow$ \textit{Credentials}: o \textit{token} do SonarQube como
+\textit{Secret text} (ID \texttt{sonar-token}) e o usuário e a senha do banco da aplicação como
+\textit{Username with password} (ID \texttt{db-notes}). No \textit{pipeline}, elas são lidas com
+\texttt{withCredentials}, e o Jenkins ainda mascara os valores nos logs.
+
+\printtela{jenkins-inicial}{Tela inicial (dashboard) do Jenkins}%
+  {Navegador em \texttt{http://localhost:8081} mostrando o \textit{dashboard} do Jenkins com os
+   \textit{jobs} criados. (Se fizer print do desbloqueio, tarje a senha inicial.)}
+
+\subsubsection{Como foi criado o primeiro job}
+
+O primeiro \textit{job} foi do tipo \textit{Freestyle project}, configurado pela interface:
+\textit{New Item} $\rightarrow$ nome \texttt{primeiro-job} $\rightarrow$ \textit{Freestyle project}
+$\rightarrow$ em \textit{Build Steps}, \textit{Add build step} $\rightarrow$ \textit{Execute shell},
+com o script do Código~\ref{cod:primeiro-job}. Ao clicar em \textit{Build Now}, o Jenkins executou o
+script na própria VM e registrou a execução no histórico (\textit{Build History}); o
+\textit{Console Output} mostrou cada comando e terminou com \texttt{Finished: SUCCESS}. As variáveis
+\texttt{JOB\_NAME} e \texttt{BUILD\_NUMBER} são fornecidas automaticamente pelo Jenkins.
+
+\codigo{bash}{05-jenkins/primeiro-job.sh}{Script do passo Execute shell do primeiro job}{primeiro-job}
+
+\printtela{jenkins-primeiro-job}{Configuração do primeiro job (Freestyle)}%
+  {Tela de configuração do \texttt{primeiro-job} mostrando o passo \textit{Execute shell} com o
+   script, ou a página do \textit{job} com o \textit{Build History}.}
+
+\printtela{jenkins-job-console}{Console Output do primeiro job}%
+  {\textit{Console Output} do \textit{build} \#1 do \texttt{primeiro-job} com a saída dos comandos e
+   \texttt{Finished: SUCCESS}.}
+
+\subsubsection{Como foi criado um pipeline}
+
+Em seguida foi criado um \textit{job} do tipo \textit{Pipeline} (\textit{New Item} $\rightarrow$
+\texttt{pipeline-basico} $\rightarrow$ \textit{Pipeline}), e, em \textit{Definition}, foi escolhida
+a opção \textit{Pipeline script} com o \texttt{Jenkinsfile} do Código~\ref{cod:jenkinsfile-basico}.
+Esse \textit{pipeline} usa a sintaxe \textbf{declarativa}: o bloco \texttt{pipeline} envolve toda a
+definição; \texttt{agent any} indica que ele pode rodar em qualquer executor disponível;
+\texttt{stages} agrupa as etapas, executadas em sequência; cada \texttt{stage} é uma etapa nomeada,
+que aparece na visualização dos estágios; e \texttt{steps} contém os comandos de cada etapa -- aqui,
+apenas \texttt{echo}, que imprime uma mensagem no log. Mesmo simples, ele mostra a estrutura de
+qualquer \textit{pipeline} real: \textit{Build}, \textit{Test} e \textit{Deploy}.
+
+\codigo{groovy}{05-jenkins/Jenkinsfile.basico}{Jenkinsfile do pipeline básico}{jenkinsfile-basico}
+
+\subsubsection{Pipeline integrado: Git, Maven, SonarQube e Docker}
+
+O passo seguinte foi transformar o exemplo em um \textit{pipeline} real para a aplicação Easy Notes,
+integrando as ferramentas estudadas (Figura~\ref{fig:pipeline} e Código~\ref{cod:jenkinsfile}).
+O \textit{job} \texttt{easy-notes-ci} foi criado do mesmo modo, colando o \texttt{Jenkinsfile} em
+\textit{Pipeline script}; a alternativa \textit{Pipeline script from SCM} faz o Jenkins ler o
+\texttt{Jenkinsfile} direto do repositório Git, o que deixa o próprio \textit{pipeline} versionado
+(\textit{pipeline as code}).
+
+\begin{figure}[H]
+  \centering
+  \caption{Estágios do pipeline de CI/CD da aplicação Easy Notes}\label{fig:pipeline}
+  \begin{tikzpicture}[node distance=0.55cm]
+    \tikzset{est/.style={caixa, text width=2.35cm, minimum height=1.15cm}}
+    \node[caixalaranja, text width=2.35cm, minimum height=1.15cm] (c) {\textbf{Commit / push}\\{\scriptsize repositório Git}};
+    \node[est, right=of c] (s1) {\textbf{Checkout}\\{\scriptsize \texttt{git}}};
+    \node[est, right=of s1] (s2) {\textbf{Build}\\{\scriptsize \texttt{mvn package}}};
+    \node[est, right=of s2] (s3) {\textbf{Testes}\\{\scriptsize \texttt{mvn test} (db01)}};
+    \node[est, below=1.15cm of s3] (s4) {\textbf{SonarQube}\\{\scriptsize análise e \textit{quality gate}}};
+    \node[est, left=of s4] (s5) {\textbf{Imagem Docker}\\{\scriptsize \texttt{docker build}}};
+    \node[est, left=of s5] (s6) {\textbf{Deploy}\\{\scriptsize \texttt{docker run}}};
+    \node[caixa, draw=corverde, fill=corverde!8, text width=2.35cm, minimum height=1.15cm, left=of s6] (s7)
+         {\textbf{Teste de fumaça}\\{\scriptsize \texttt{curl /api/notes}}};
+    \draw[seta] (c) -- node[rotulo, above=1pt]{\scriptsize poll} (s1);
+    \draw[seta] (s1) -- (s2);
+    \draw[seta] (s2) -- (s3);
+    \draw[seta] (s3) -- (s4);
+    \draw[seta] (s4) -- node[rotulo, above=1pt]{aprovado} (s5);
+    \draw[seta] (s5) -- (s6);
+    \draw[seta] (s6) -- (s7);
+    \node[caixa, draw=corvermelha, fill=corvermelha!7, text width=3.7cm, below=0.85cm of s4] (f)
+         {\textbf{Pipeline interrompido}\\{\scriptsize o time corrige e envia um novo \textit{commit}}};
+    \draw[seta, color=corvermelha] (s4) -- node[rotulo, right=2pt]{reprovado} (f);
+    \draw[seta, dashed, color=corvermelha] (f.west) -| ($(s7.west)+(-0.45,0)$) |- (c.west);
+    \node[rotulo, rotate=90, anchor=south] at ($(s7.west)+(-0.45,-0.9)$) {correção};
+  \end{tikzpicture}
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}
+
+\codigolongo{groovy}{05-jenkins/Jenkinsfile}{Jenkinsfile do pipeline integrado da aplicação Easy Notes}{jenkinsfile}
+
+Cada parte do \texttt{Jenkinsfile} cumpre um papel na integração:
+
+\begin{itemize}
+  \item \textbf{\texttt{environment}}: centraliza endereços e nomes (repositório, servidor do
+        SonarQube, URL do banco, nome da imagem) e define o \texttt{JAVA\_HOME} usado pelo Maven.
+  \item \textbf{\texttt{triggers}} com \texttt{pollSCM}: o Jenkins consulta o repositório a cada cinco
+        minutos e dispara o \textit{pipeline} quando encontra um \textit{commit} novo -- integração
+        com o \textbf{Git}. (Um \textit{webhook} do GitHub seria mais imediato, mas exigiria que o
+        GitHub alcançasse a VM, o que não ocorre em uma rede privada de laboratório.)
+  \item \textbf{Checkout}: o passo \texttt{git} clona o repositório da aplicação no
+        \textit{workspace} do \textit{job}.
+  \item \textbf{Build}: compila e empacota a aplicação com o Maven (\cod|mvn clean package|).
+  \item \textbf{Testes}: executa os testes; o teste da aplicação sobe o contexto do Spring e conecta-se
+        ao MariaDB do \texttt{db01}, configurado pelo Ansible. As credenciais chegam pelas variáveis
+        \texttt{SPRING\_DATASOURCE\_*}, sem ficarem escritas no código.
+  \item \textbf{Análise SonarQube}: executa o \texttt{sonar-scanner} com o \textit{token} vindo das
+        credenciais do Jenkins -- integração com o \textbf{SonarQube}. Com
+        \texttt{sonar.qualitygate.wait=true}, o \textit{scanner} aguarda o resultado do Quality Gate e
+        o estágio falha se o código for reprovado, interrompendo o \textit{pipeline}.
+  \item \textbf{Imagem Docker}: gera o \texttt{Dockerfile} e constrói a imagem
+        \texttt{devops/notes}, marcada com o número do \textit{build} -- integração com o
+        \textbf{Docker}.
+  \item \textbf{Deploy} e \textbf{Teste de fumaça}: substituem o container anterior pelo novo e
+        confirmam, com \texttt{curl}, que a API responde; o \texttt{retry} repete a verificação
+        enquanto a aplicação inicializa.
+  \item \textbf{\texttt{post}}: registra no log se o \textit{pipeline} terminou com sucesso ou falha.
+\end{itemize}
+
+Com isso, o laboratório passou a ter um fluxo de \textbf{entrega contínua} completo até o ambiente de
+testes. Para torná-lo \textit{deploy} contínuo em produção, bastaria acrescentar um estágio que
+publicasse a imagem em um \textit{registry} e atualizasse os servidores de produção (por exemplo,
+executando o Ansible); para mantê-lo como entrega contínua, esse estágio teria um \texttt{input} de
+aprovação manual.
+
+\subsubsection{Evidências da execução}
+
+\printtela{jenkins-pipeline-sucesso}{Pipeline executado com sucesso e seus stages}%
+  {Página do \textit{job} de \textit{pipeline} com a visualização dos estágios (\textit{Stage View}
+   ou \textit{Pipeline Graph View}) mostrando todos os \textit{stages} em verde.}
+
+\printtela{jenkins-pipeline-logs}{Logs do build do pipeline (Console Output)}%
+  {\textit{Console Output} do \textit{build} do \textit{pipeline} mostrando a execução dos
+   \textit{stages} (por exemplo, a saída do Maven ou do \texttt{sonar-scanner}) e
+   \texttt{Finished: SUCCESS}.}
+
+\printtela{jenkins-jenkinsfile}{Jenkinsfile configurado no job de pipeline}%
+  {Tela de configuração do \textit{job} (\textit{Configure} $\rightarrow$ \textit{Pipeline}) com o
+   \texttt{Jenkinsfile} visível no campo \textit{Script} (ou o arquivo no repositório GitHub).}
+
+\subsubsection{Como o Jenkins automatiza etapas manuais}
+
+Sem o Jenkins, cada nova versão exigiria que alguém executasse à mão a mesma sequência de passos:
+atualizar o código, compilar, rodar os testes, executar a análise, gerar a imagem, parar o container
+antigo, subir o novo e testar a API. Além de demorado, esse processo é sujeito a erros -- esquecer um
+passo, executar na ordem errada, usar a versão errada do Java -- e depende da disponibilidade de uma
+pessoa. Com o \textit{pipeline}, essas etapas rodam sempre da mesma forma, na mesma ordem, a cada
+alteração; o processo para no primeiro erro, registra tudo em log, guarda o histórico de cada
+\textit{build} e dá \textit{feedback} rápido para quem fez a mudança. É isso que permite entregar
+com frequência e com confiança.

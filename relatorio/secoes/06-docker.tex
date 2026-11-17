@@ -1,0 +1,181 @@
+% =====================================================================
+%  2.4 Atividade com Docker
+% =====================================================================
+\subsection{Atividade com Docker (containers)}\label{sec:docker}
+
+\subsubsection{O que é o Docker e o que é um container}
+
+O \textbf{Docker} é uma plataforma de conteinerização que permite empacotar uma aplicação junto com
+todas as suas dependências e executá-la de forma isolada -- ``uma forma de rodar aplicações
+isoladas, leves e portáveis'' \citep{muniz2026,docker2026}. Um \textbf{container} é um processo
+isolado que roda de forma independente dentro do sistema operacional: ele tem o seu próprio sistema
+de arquivos e recursos isolados (CPU, memória e rede), mas \textbf{compartilha o \textit{kernel}
+do host}, o que o torna muito mais leve que uma máquina virtual. O Docker resolve problemas comuns do
+mundo real, como conflitos de versões (Java 8 \textit{versus} Java 17 no mesmo servidor), bibliotecas
+faltando e diferenças entre a máquina do desenvolvedor e o servidor -- novamente, o ``funciona na
+minha máquina''. A Tabela~\ref{tab:vm-container} compara as duas abordagens.
+
+\begin{table}[H]
+  \centering
+  \caption{Comparação entre máquina virtual e container}\label{tab:vm-container}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+    \toprule
+    \textbf{Característica} & \textbf{Máquina virtual (Vagrant/VMware)} & \textbf{Container (Docker)} \\
+    \midrule
+    Sistema operacional & Cada VM tem um SO completo (\textit{guest OS}) & Compartilha o \textit{kernel} do host \\
+    Camada de execução & Hipervisor & Docker Engine \\
+    Tamanho & Gigabytes & Megabytes \\
+    Inicialização & Minutos & Segundos \\
+    Uso de recursos & Maior & Menor e mais eficiente \\
+    Uso no laboratório & Simular servidores completos & Empacotar e executar a aplicação \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+\subsubsection{Arquitetura e componentes}
+
+O \textbf{Docker Client} (comando \texttt{docker}) envia as solicitações do usuário para o
+\textbf{Docker Daemon} (\texttt{dockerd}), que é quem de fato gerencia os objetos do Docker. Os
+principais objetos são \citep{docker2026}:
+
+\begin{itemize}
+  \item \textbf{Imagem}: modelo somente leitura (imutável) com tudo o que a aplicação precisa para
+        rodar. É gerada a partir de um \textbf{Dockerfile}, um arquivo de texto com as instruções de
+        construção -- uma ``receita de bolo''.
+  \item \textbf{Container}: instância em execução de uma imagem; pode ser criado, iniciado, parado,
+        removido e conectado a redes e volumes.
+  \item \textbf{Registry}: repositório de imagens, público (Docker Hub) ou privado; os comandos
+        \cod|docker pull| e \cod|docker push| baixam e enviam imagens.
+  \item \textbf{Volume}: armazenamento persistente. Como o container é efêmero, dados que precisam
+        sobreviver (como os arquivos de um banco) ficam em volumes (\cod|docker run -v /dados:/var/lib/mysql mysql|).
+  \item \textbf{Rede}: redes virtuais que permitem a comunicação entre containers, com resolução de
+        nomes por DNS (\cod|docker network create devops|).
+  \item \textbf{Docker Compose}: ferramenta para definir e subir aplicações com vários containers a
+        partir de um arquivo YAML, com um único comando (\cod|docker compose up -d|).
+\end{itemize}
+
+\subsubsection{Prática: a aplicação Easy Notes em um container}
+
+Para a prática foi criada a VM \texttt{docker-notes} (\texttt{192.168.1.5}), seguindo o mesmo modelo
+de \texttt{Vagrantfile} das demais. O seu script de provisionamento (Código~\ref{cod:provision-docker})
+instala o Docker Engine a partir do repositório oficial, habilita o serviço e adiciona o usuário
+\texttt{vagrant} ao grupo \texttt{docker}.
+
+\codigo{bash}{03-docker-lab/provision.sh}{Provisionamento da VM docker-notes (instalação do Docker)}{provision-docker}
+
+A primeira imagem foi construída a partir do JAR que o Ansible já havia compilado no \texttt{app01}.
+Para copiar esse arquivo para o Windows foi usado o \cod|vagrant ssh-config|, que mostra a porta SSH
+redirecionada e o caminho da chave privada da VM, e em seguida o \texttt{scp}; depois, o
+\cod|vagrant upload| enviou o JAR e o \texttt{application.properties} para a VM do Docker
+(Código~\ref{cod:copia-jar}).
+
+\begin{terminal}[caption={Cópia do JAR do app01 para a VM docker-notes},label={cod:copia-jar}]
+# Na pasta app01 (Windows): descobre a porta e a chave privada usadas pelo Vagrant
+vagrant ssh-config
+scp -i ".vagrant/machines/default/vmware_desktop/private_key" -P 2200 `
+    vagrant@127.0.0.1:/opt/notes/target/easy-notes-1.0.0.jar .
+
+# Na pasta da VM do Docker: envia os arquivos para dentro da VM
+vagrant upload .\easy-notes-1.0.0.jar /tmp/easy-notes.jar
+vagrant upload .\application.properties /tmp/application.properties
+\end{terminal}
+
+Dentro da VM, os arquivos foram copiados para uma pasta de trabalho junto com o \texttt{Dockerfile}
+do Código~\ref{cod:dockerfile}. Cada instrução tem uma função: \texttt{FROM} define a imagem base
+(um JRE Java sobre Alpine Linux, bem enxuto); \texttt{RUN} executa comandos durante o
+\textit{build} (aqui, cria um grupo e um usuário sem privilégios); \texttt{USER} faz a aplicação rodar
+com esse usuário, e não como \texttt{root}; \texttt{ARG} e \texttt{COPY} copiam o JAR e o arquivo de
+configuração para dentro da imagem; \texttt{EXPOSE} documenta a porta usada pela aplicação; e
+\texttt{ENTRYPOINT} define o comando executado quando o container inicia.
+
+\codigo{docker}{03-docker-lab/Dockerfile}{Dockerfile da aplicação Easy Notes}{dockerfile}
+
+\begin{nota}[Versão do Java]
+  O slide da aula usava a imagem \texttt{eclipse-temurin:8-jdk-alpine}. A versão do Java da imagem,
+  porém, precisa ser igual ou superior à usada para compilar o JAR; como no \texttt{app01} a
+  aplicação foi compilada com o Java 21, a imagem base foi ajustada para
+  \texttt{eclipse-temurin:21-jre-alpine}. Caso contrário, o container falha ao iniciar com o erro
+  \texttt{UnsupportedClassVersionError}.
+\end{nota}
+
+O \texttt{application.properties} usado pelo container (Código~\ref{cod:app-props-docker}) aponta
+para o banco do \texttt{db01}. Como o container precisa resolver o nome \texttt{db01}, ele foi
+iniciado com a opção \cod|--add-host db01:192.168.1.4|. Os comandos usados para construir, executar e
+testar o container estão no Código~\ref{cod:docker-comandos}.
+
+\codigo{ini}{03-docker-lab/application.properties}{application.properties usado no container}{app-props-docker}
+
+\begin{terminal}[caption={Construção, execução e teste do container},label={cod:docker-comandos}]
+docker build -t devops/notes .                   # constrói a imagem a partir do Dockerfile
+docker images                                    # lista as imagens locais
+docker run -d --name notes -p 8080:8080 \
+  --add-host db01:192.168.1.4 devops/notes       # cria e inicia o container em segundo plano
+docker ps                                        # containers em execução
+docker logs -f notes                             # acompanha o log do Spring Boot
+curl http://localhost:8080/api/notes             # testa a API dentro da VM
+docker stop notes && docker rm notes             # para e remove o container
+\end{terminal}
+
+\subsubsection{Multi-stage build}
+
+O \texttt{Dockerfile} anterior depende de um JAR compilado fora do Docker. A técnica de
+\textbf{\textit{multi-stage build}} resolve isso usando vários estágios em um único arquivo
+(Código~\ref{cod:multistage}): o primeiro estágio (\texttt{buildstage}) usa uma imagem com Maven e
+JDK para clonar o repositório e compilar o projeto; o segundo estágio parte de uma imagem só com o
+JRE e copia apenas o JAR final (\cod|COPY --from=buildstage|). As ferramentas de \textit{build}, o
+código-fonte e o \textit{cache} do Maven ficam para trás, de modo que a imagem final é muito menor,
+mais rápida de baixar e mais segura (menos ferramentas expostas significa menor superfície de
+ataque). Como resumido em aula, o \texttt{Dockerfile} tradicional ``leva a oficina inteira para
+produção'', enquanto o \textit{multi-stage} ``leva só o carro pronto'' \citep{muniz2026}.
+
+\codigo{docker}{03-docker-lab/Dockerfile.multistage}{Dockerfile com multi-stage build}{multistage}
+
+\begin{table}[H]
+  \centering
+  \caption{Comandos do Docker utilizados}\label{tab:comandos-docker}
+  \small
+  \renewcommand{\arraystretch}{1.18}
+  \begin{tabularx}{\linewidth}{>{\ttfamily}l >{\raggedright\arraybackslash}X}
+    \toprule
+    \normalfont\bfseries Comando & \textbf{Função} \\
+    \midrule
+    docker build -t nome . & Constrói uma imagem a partir do \texttt{Dockerfile} da pasta atual. \\
+    docker images & Lista as imagens disponíveis localmente. \\
+    docker run -d -p 8080:8080 imagem & Cria e inicia um container, publicando a porta. \\
+    docker ps / docker ps -a & Lista os containers em execução / todos os containers. \\
+    docker logs -f container & Mostra o log do container em tempo real. \\
+    docker stop / docker rm & Para / remove um container. \\
+    docker network create rede & Cria uma rede personalizada para os containers. \\
+    docker compose up -d & Sobe todos os serviços definidos no arquivo do Compose. \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026), com base em Muniz (2026).}
+\end{table}
+
+\subsubsection{Evidências da execução}
+
+\printtela{docker-build}{Construção da imagem com \texttt{docker build}}%
+  {Terminal na VM docker-notes com a saída do \texttt{docker build -t devops/notes .} terminando
+   com sucesso (\textit{Successfully built/tagged} ou \texttt{naming to docker.io/devops/notes}).}
+
+\printtela{docker-ps}{Imagem criada e container em execução}%
+  {Terminal com \texttt{docker images} (mostrando \texttt{devops/notes}) e \texttt{docker ps}
+   (container \texttt{notes} com status \textit{Up} e a porta 8080 publicada).}
+
+\printtela{docker-api}{API da aplicação respondendo a partir do container}%
+  {Terminal com \texttt{curl http://localhost:8080/api/notes} (ou o navegador do Windows em
+   \texttt{http://localhost:8082/api/notes}) retornando o JSON das notas.}
+
+\subsubsection{Relação com o DevOps}
+
+O Docker padroniza o ambiente de execução: a mesma imagem que funciona no laboratório funciona em
+qualquer servidor ou nuvem, pois carrega consigo todas as dependências -- ``se roda no Docker, roda
+em qualquer lugar''. Isso simplifica o \textit{deploy}, facilita a arquitetura de microsserviços
+(cada serviço em um container) e torna as imagens um artefato natural para os \textit{pipelines}
+de CI/CD: o Jenkins gera a imagem a cada versão aprovada, e ela pode ser publicada em um
+\textit{registry} e executada por orquestradores como o Kubernetes. No laboratório, foi justamente
+essa imagem que o \textit{pipeline} do Jenkins passou a construir automaticamente
+(Seção~\ref{sec:jenkins}).

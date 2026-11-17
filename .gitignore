@@ -1,0 +1,15 @@
+# Arquivos temporários do LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.lol
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+relatorio/main.pdf
+
+# Estado local do Vagrant
+.vagrant/

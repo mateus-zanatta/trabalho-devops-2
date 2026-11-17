@@ -1,0 +1,46 @@
+% =====================================================================
+%  4 Pergunta reflexiva final
+% =====================================================================
+% ATENÇÃO: esta resposta precisa estar com as SUAS palavras (exigência do professor).
+% Use o texto abaixo como rascunho: revise, troque exemplos e acrescente sua experiência real.
+\section{Pergunta reflexiva final}\label{sec:reflexao}
+
+\begin{tcolorbox}[enhanced, colback=corprimaria!5, colframe=corprimaria, boxrule=0pt, leftrule=3pt,
+    arc=0pt, outer arc=0pt, left=8pt, right=8pt, top=6pt, bottom=6pt]
+  \itshape Qual das tecnologias estudadas na disciplina você ainda não conhecia ou conhecia pouco?
+  Como a disciplina ajudou você a entender melhor o funcionamento do DevOps?
+\end{tcolorbox}
+
+Das tecnologias estudadas, a que eu menos conhecia era o \textbf{Ansible} e, junto com ele, o próprio
+conceito de Infraestrutura como Código. Eu já usava Git e GitHub nos projetos da faculdade, mas
+sempre tinha configurado servidores e ambientes ``na mão'', seguindo tutoriais e repetindo comandos
+sem muito controle do que tinha sido feito. O Vagrant também era novidade para mim. Com o Ansible,
+aprendi que é possível descrever em arquivos YAML como um servidor deve ficar e deixar a ferramenta
+garantir esse estado, e que, graças à idempotência, executar o mesmo \textit{playbook} de novo não
+estraga nada: ele só confirma que está tudo certo ou corrige o que estiver diferente.
+
+A maior dificuldade foi fazer a comunicação entre as máquinas funcionar. O primeiro
+\cod|ansible -m ping all| falhou com \textit{Permission denied}, e eu precisei entender de verdade
+como funciona a autenticação por chave SSH: a chave privada fica no \textit{control-node} e a chave
+pública vai para o \texttt{authorized\_keys} dos servidores. Também tive problemas com a indentação
+do YAML e com o arquivo de configuração do Ansible, que era ignorado por estar em uma pasta com
+permissão de escrita para todos. Resolver esses erros seguindo uma ordem de diagnóstico (máquina,
+porta, \textit{firewall}, serviço, logs) me ensinou mais do que se tudo tivesse funcionado de
+primeira.
+
+A prática foi o que fez a teoria ter sentido. Ver o \texttt{db01} e o \texttt{app01} sendo
+configurados sozinhos, a API do Easy Notes respondendo e a nota aparecendo gravada no banco mostrou
+na prática o que significa automação. E, quando as ferramentas foram juntadas, ficou claro como elas
+se conectam na cultura DevOps: o Vagrant cria a infraestrutura, o Git versiona tudo, o Ansible
+configura os servidores, o Docker empacota a aplicação, o SonarQube verifica a qualidade e o Jenkins
+orquestra todas essas etapas a cada \textit{commit}. Percebi que nenhuma delas, sozinha, ``é o
+DevOps'': o DevOps está na integração entre elas e na forma de trabalhar, com automação, colaboração e
+\textit{feedback} rápido.
+
+Para a minha formação, esse conhecimento é muito importante. Hoje, mesmo quem trabalha principalmente
+com desenvolvimento precisa entender como o código chega até a produção, e o mercado procura
+profissionais que saibam automatizar, versionar e entregar software com qualidade e segurança. Como
+já venho estudando Azure por conta própria, consegui relacionar o que vi na disciplina com a nuvem,
+onde os mesmos conceitos de Infraestrutura como Código, \textit{pipelines} e containers aparecem o
+tempo todo. A disciplina me deu uma base prática que pretendo continuar desenvolvendo nos próximos
+projetos.

@@ -1,0 +1,89 @@
+% =====================================================================
+%  Comandos e ambientes personalizados do relatório
+% =====================================================================
+
+% ---------- Fonte abaixo de figuras e tabelas (padrão ABNT) ----------
+\newcommand{\fonte}[1]{\par\vspace{3pt}{\footnotesize Fonte: #1}\par}
+
+% ---------- Texto a ser completado pelo aluno ----------
+% Aparece destacado em amarelo no PDF para não passar despercebido.
+\newcommand{\preencher}[1]{\colorbox{yellow!45}{\strut\footnotesize\bfseries[PREENCHER: #1]}}
+
+% ---------- Código/comando curto dentro do texto ----------
+\newcommand{\cod}{\lstinline[basicstyle=\ttfamily\small,keywordstyle=,stringstyle=,commentstyle=,
+  postbreak={},breakindent=0pt]}
+
+% ---------- Caixa exibida quando o print ainda não foi adicionado ----------
+\newcommand{\caixaprint}[2]{%
+  \begin{tcolorbox}[enhanced, width=0.86\linewidth, colback=gray!4,
+      frame hidden, borderline={0.7pt}{0pt}{gray!55,dashed}, arc=1.5mm,
+      halign=center, valign=center, height=3.6cm, fontupper=\small,
+      before skip=2pt, after skip=2pt]
+    {\color{cordestaque}\bfseries INSERIR PRINT AQUI}\par\smallskip
+    {\ttfamily\footnotesize Salvar como: prints/#1.png}\par\medskip
+    \begin{minipage}{0.92\linewidth}\centering\footnotesize #2\end{minipage}
+  \end{tcolorbox}}
+
+% ---------- Print de tela ----------
+% \printtela[largura]{arquivo}{legenda}{o que capturar}
+% Se existir prints/<arquivo>.png (ou .jpg/.jpeg), a imagem é inserida;
+% caso contrário, aparece a caixa indicando qual print deve ser feito.
+\newcommand{\printtela}[4][0.9]{%
+  \begin{figure}[H]
+    \centering
+    \caption{#3}\label{fig:#2}
+    \IfFileExists{prints/#2.png}{\includegraphics[width=#1\linewidth]{prints/#2.png}}{%
+      \IfFileExists{prints/#2.jpg}{\includegraphics[width=#1\linewidth]{prints/#2.jpg}}{%
+        \IfFileExists{prints/#2.jpeg}{\includegraphics[width=#1\linewidth]{prints/#2.jpeg}}{%
+          \caixaprint{#2}{#4}}}}
+    \fonte{Elaborado pelo autor (2026).}
+  \end{figure}}
+
+% ---------- Código-fonte a partir de arquivo do laboratório ----------
+% \codigo[opções]{linguagem}{arquivo dentro de codigos/}{legenda}{rótulo}
+%   -> listagem curta: fica inteira na mesma página (dentro de uma minipage)
+% \codigolongo[opções]{linguagem}{arquivo}{legenda}{rótulo}
+%   -> listagem longa: pode continuar na página seguinte
+\newcommand{\codigo}[5][]{%
+  \par\smallskip\noindent\begin{minipage}{\linewidth}%
+  \lstinputlisting[language=#2,caption={[{#4}]{#4 -- \nolinkurl{#3}}},label={cod:#5},#1]{codigos/#3}%
+  \end{minipage}\par\smallskip}
+\newcommand{\codigolongo}[5][]{%
+  \par\needspace{12\baselineskip}%
+  \lstinputlisting[language=#2,caption={[{#4}]{#4 -- \nolinkurl{#3}}},label={cod:#5},#1]{codigos/#3}}
+
+% ---------- Listagens digitadas no texto (não quebram entre páginas) ----------
+% \begin{terminal}[caption={...},label={cod:...}] ... \end{terminal}  -> comandos de terminal
+% \begin{listagem}[language=...,caption={...}] ... \end{listagem}    -> outros trechos de código
+\lstnewenvironment{terminal}[1][]%
+  {\endgraf\smallskip\noindent\minipage{\linewidth}\lstset{style=terminal,#1}}%
+  {\endminipage\endgraf\smallskip}
+\lstnewenvironment{listagem}[1][]%
+  {\endgraf\smallskip\noindent\minipage{\linewidth}\lstset{#1}}%
+  {\endminipage\endgraf\smallskip}
+
+% ---------- Caixas de destaque ----------
+\newtcolorbox{nota}[1][Observação]{enhanced, breakable, colback=corprimaria!4,
+  colframe=corprimaria, boxrule=0pt, leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=7pt, right=7pt, top=5pt, bottom=5pt, fontupper=\small,
+  before upper={\textbf{\color{corprimaria}#1:}\ }, before skip=8pt, after skip=8pt}
+
+\newtcolorbox{atencao}[1][Atenção]{enhanced, breakable, colback=cordestaque!6,
+  colframe=cordestaque, boxrule=0pt, leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=7pt, right=7pt, top=5pt, bottom=5pt, fontupper=\small,
+  before upper={\textbf{\color{cordestaque}#1:}\ }, before skip=8pt, after skip=8pt}
+
+% ---------- Estilos TikZ dos diagramas ----------
+\tikzset{
+  caixa/.style={draw=corprimaria, fill=corprimaria!6, rounded corners=3pt, align=center,
+                font=\footnotesize, inner sep=5pt, line width=0.6pt},
+  caixaescura/.style={draw=corprimaria, fill=corprimaria, text=white, rounded corners=3pt,
+                align=center, font=\footnotesize\bfseries, inner sep=5pt},
+  caixalaranja/.style={draw=cordestaque, fill=cordestaque!8, rounded corners=3pt, align=center,
+                font=\footnotesize, inner sep=5pt, line width=0.6pt},
+  caixacinza/.style={draw=gray!60, fill=gray!8, rounded corners=3pt, align=center,
+                font=\footnotesize, inner sep=5pt},
+  seta/.style={-{Stealth[length=2.4mm]}, line width=0.7pt, color=corcinza},
+  setadupla/.style={{Stealth[length=2.4mm]}-{Stealth[length=2.4mm]}, line width=0.7pt, color=corcinza},
+  rotulo/.style={font=\scriptsize, text=corcinza, fill=white, inner sep=1.5pt},
+}

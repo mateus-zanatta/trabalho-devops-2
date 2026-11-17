@@ -1,0 +1,85 @@
+---
+# Role configuracao-mariadb: instala, protege e prepara o MariaDB para a aplicação.
+
+- name: Instalar MariaDB Server
+  dnf:
+    name:
+      - mariadb
+      - mariadb-server
+      - python3-PyMySQL
+    state: present
+
+- name: Habilitar e iniciar MariaDB
+  service:
+    name: mariadb
+    enabled: yes
+    state: started
+
+# Na primeira execução o root ainda não tem senha: o acesso é feito pelo socket local.
+- name: Definir senha inicial do root do MariaDB
+  community.mysql.mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: /var/lib/mysql/mysql.sock
+    check_implicit_admin: yes
+    state: present
+  ignore_errors: yes
+
+- name: Criar arquivo /root/.my.cnf
+  copy:
+    dest: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      password={{ mysql_root_password }}
+    owner: root
+    group: root
+    mode: '0600'
+
+# Boas práticas de segurança (equivalente ao mysql_secure_installation)
+- name: Remover usuários anônimos
+  community.mysql.mysql_user:
+    name: ''
+    host_all: yes
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: absent
+
+- name: Remover banco de teste
+  community.mysql.mysql_db:
+    name: test
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: absent
+
+- name: Criar banco de dados da aplicação
+  community.mysql.mysql_db:
+    name: "{{ mysql_db_name }}"
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: present
+
+- name: Criar usuário da aplicação
+  community.mysql.mysql_user:
+    name: "{{ mysql_user }}"
+    host: "%"
+    password: "{{ mysql_user_password }}"
+    priv: "{{ mysql_db_name }}.*:ALL"
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: present
+
+- name: Liberar porta 3306 no firewalld
+  firewalld:
+    port: 3306/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Liberar serviço mysql no firewalld
+  firewalld:
+    service: mysql
+    permanent: yes
+    state: enabled
+    immediate: yes
